@@ -16,7 +16,7 @@
         .math-equation { font-family: "Times New Roman", serif; font-style: italic; background: #f1f3f4; padding: 4px 8px; border-radius: 4px; }
         .interactive-module-box { border: 2px dashed #1a73e8; background-color: #f8f9fa; border-radius: 6px; padding: 15px; margin: 20px 0; }
         .module-header { font-size: 14px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        #game-frame-container { width: 100%; height: 380px; background: #000; border-radius: 4px; position: relative; overflow: hidden; display: none; }
+        #game-frame-container { width: 100%; height: 380px; background: #050508; border-radius: 4px; position: relative; overflow: hidden; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
         .btn-tool { background-color: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 5px; }
         .btn-tool:hover { background-color: #1557b0; }
@@ -48,7 +48,7 @@
             </div>
             
             <div id="game-frame-container">
-                <!-- Clean, secure sandbox iframe template -->
+                <!-- Clean standard frame with zero mouse-locking barriers -->
                 <iframe id="game-sandbox-target" src=""></iframe>
             </div>
         </div>
@@ -63,6 +63,7 @@
     </div>
 
     <script>
+        // Directly maps the iframe targets cleanly
         function loadEmbeddedGame(gameFile) {
             const container = document.getElementById('game-frame-container');
             const iframe = document.getElementById('game-sandbox-target');
@@ -70,7 +71,7 @@
             container.style.display = 'block';
         }
 
-        // Emergency Tilde Panic Key (Removes the game completely)
+        // Emergency Tilde Panic Key (Wipes out the game window frame immediately)
         document.addEventListener('keydown', function(event) {
             if (event.key === '`') {
                 const container = document.getElementById('game-frame-container');
