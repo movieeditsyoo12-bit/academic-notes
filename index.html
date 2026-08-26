@@ -3,73 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="site-title">Google Docs - Assignment Notes</title>
-    <link id="site-icon" rel="icon" type="image/x-icon" href="https://gstatic.com">
+    <title>Quiz: Unit 4 Trigonometric Functions</title>
+    <link rel="icon" type="image/x-icon" href="https://gstatic.com">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; background-color: #fcfcfc; }
-        header { border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-        h1 { color: #1a202c; font-size: 26px; font-weight: 600; }
-        p { color: #4a5568; font-size: 15px; }
-        .project-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .project-card h2 { margin-top: 0; font-size: 18px; color: #1a0dab; font-weight: 500; }
-        .btn { display: inline-block; background-color: #1a73e8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 14px; border: none; cursor: pointer; }
-        .btn:hover { background-color: #1557b0; }
-        .warning-text { background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; border: 1px solid #ffeeba; }
+        body { font-family: "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #202124; user-select: none; }
+        .navbar { background-color: #fff; border-bottom: 1px solid #dadce0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-title { font-size: 18px; font-weight: 500; color: #3c4043; }
+        .nav-info { font-size: 14px; color: #70757a; }
+        .container { max-width: 1000px; margin: 30px auto; background: #fff; border: 1px solid #dadce0; border-radius: 8px; padding: 40px; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); }
+        h1 { font-size: 24px; font-weight: 400; margin-top: 0; border-bottom: 1px solid #e8eaed; padding-bottom: 15px; }
+        .question-box { margin-bottom: 30px; font-size: 16px; }
+        .math-equation { font-family: "Times New Roman", serif; font-style: italic; background: #f1f3f4; padding: 4px 8px; border-radius: 4px; }
+        .interactive-module-box { border: 2px dashed #1a73e8; background-color: #f8f9fa; border-radius: 6px; padding: 15px; margin: 20px 0; }
+        .module-header { font-size: 14px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        #game-frame-container { width: 100%; height: 380px; background: #000; border-radius: 4px; position: relative; overflow: hidden; display: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .btn-tool { background-color: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 5px; }
+        .btn-tool:hover { background-color: #1557b0; }
+        .options label { display: block; margin: 10px 0; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Academic Workspaces & WebGL Modules</h1>
-        <p>Central hub for browser-based engine calculations, matrix array transformations, and local repository mirrors.</p>
-    </header>
+    <div class="navbar">
+        <div class="nav-title">📐 Advanced Trigonometry Sandbox</div>
+        <div class="nav-info">Student ID: Guest_Session_Active</div>
+    </div>
 
-    <main>
-        <div class="warning-text">
-            <strong>🚨 PANIC KEY ENABLED:</strong> Press the <strong>` (Tilde / Backtick)</strong> key at any time to instantly escape to an official Google Classroom page.
+    <div class="container">
+        <h1>Assessment 04B: Matrix Plane Transformations</h1>
+        
+        <div class="question-box">
+            <p><strong>Question 1:</strong> Calculate the vector translation amplitude given the baseline function environment coordinate array below:</p>
+            <p class="math-equation">f(x) = 2sin(3x - π/2) + 4</p>
         </div>
 
-        <div class="project-card">
-            <h2>Module 04: Temu Last of Us (3D Vector Translation Pipeline)</h2>
-            <p>Evaluating hardware layer optimizations for WebGL vertex transformations in low-bandwidth sandboxed runtime containers.</p>
-            <button class="btn" onclick="launchGame('tlou.html')">Initialize Simulation Instance</button>
+        <div class="interactive-module-box">
+            <div class="module-header">
+                <span>📊 Interactive Vector Sandbox Module v4.1</span>
+                <div>
+                    <button class="btn-tool" style="background:#5f6368;" onclick="loadEmbeddedGame('tlou.html')">Load Plane A (TLOU)</button>
+                    <button class="btn-tool" style="background:#5f6368;" onclick="loadEmbeddedGame('flappy.html')">Load Plane B (Flappy)</button>
+                </div>
+            </div>
+            
+            <div id="game-frame-container">
+                <iframe id="game-sandbox-target" src=""></iframe>
+            </div>
         </div>
 
-        <div class="project-card">
-            <h2>Module 05: Logarithmic Gravity Tracking Mechanics (Flappy Pipeline)</h2>
-            <p>Plotting dynamic velocity changes across 2D boundaries to analyze canvas redrawing constraints under extreme refresh cycles.</p>
-            <button class="btn" onclick="launchGame('flappy.html')">Initialize Vector Test</button>
+        <div class="question-box">
+            <p><strong>Question 2:</strong> What is the phase shift of the plotted function within the interactive bounding canvas box?</p>
+            <div class="options">
+                <label><input type="radio" name="q2"> a) π/3 units to the right</label>
+                <label><input type="radio" name="q2"> b) π/6 units to the left</label>
+            </div>
         </div>
-    </main>
+    </div>
 
     <script>
-        document.addEventListener('keydown', function(event) {
-            if (event.key === '`') window.location.replace('https://google.com');
-        });
-
-        window.addEventListener('blur', () => { document.title = "Google Docs"; });
-        window.addEventListener('focus', () => { document.title = "Google Docs - Assignment Notes"; });
-
-        function launchGame(fileName) {
-            const gameWindow = window.open('about:blank', '_blank');
-            
-            fetch(fileName)
-                .then(response => response.text())
-                .then(htmlCode => {
-                    const panicScript = `
-                        <script>
-                            document.addEventListener('keydown', function(e) {
-                                if (e.key === '\`') window.close();
-                            });
-                        <\/script>
-                    `;
-                    gameWindow.document.write(htmlCode + panicScript);
-                    gameWindow.document.close();
-                })
-                .catch(err => {
-                    window.location.href = fileName;
-                });
+        // Directly maps the iframe src instead of using complex write parsing strings
+        function loadEmbeddedGame(gameFile) {
+            const container = document.getElementById('game-frame-container');
+            const iframe = document.getElementById('game-sandbox-target');
+            iframe.src = gameFile;
+            container.style.display = 'block';
         }
+
+        // Emergency Panic Eraser Configuration
+        document.addEventListener('keydown', function(event) {
+            if (event.key === '`') {
+                const container = document.getElementById('game-frame-container');
+                const iframe = document.getElementById('game-sandbox-target');
+                iframe.src = ""; 
+                container.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
