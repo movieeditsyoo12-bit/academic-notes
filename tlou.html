@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Module 04A - Endless Terrain Data Processor</title>
+    <title>Module 04A - Side-Perspective Depth Engine</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #020203; overflow: hidden; font-family: 'Courier New', Courier, monospace; user-select: none; }
-        canvas { display: block; width: 100%; height: 100vh; background-color: #030305; }
+        body { margin: 0; padding: 0; background-color: #030305; overflow: hidden; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100%; height: 100vh; background-color: #050508; }
         #hud-container {
             position: absolute;
             bottom: 20px;
@@ -14,22 +14,21 @@
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
-            background: rgba(7, 8, 12, 0.9);
+            background: rgba(7, 8, 12, 0.95);
             border: 1px solid #1e293b;
             padding: 12px 24px;
             border-radius: 6px;
             pointer-events: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
         }
         .inventory-slot { text-align: center; color: #94a3b8; font-size: 11px; letter-spacing: 1px; }
         .inventory-count { font-size: 18px; font-weight: bold; color: #f1f5f9; margin-top: 2px; }
-        #info-banner { position: absolute; top: 15px; left: 15px; color: #64748b; background: rgba(5,5,8,0.92); padding: 8px 14px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; letter-spacing: 1px; }
-        #loot-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #fbbf24; font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 6px 16px; border-radius: 4px; border: 1px solid #d97706; display: none; pointer-events: none; box-shadow: 0 0 10px rgba(217,119,6,0.3); }
+        #info-banner { position: absolute; top: 15px; left: 15px; color: #64748b; background: rgba(5,5,8,0.92); padding: 8px 14px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; }
+        #loot-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #fbbf24; font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 6px 16px; border-radius: 4px; border: 1px solid #d97706; display: none; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="info-banner">⚙️ PROCEDURAL APOCALYPSE WORLD | WASD: MOVE | AIM MOUSE | APPROACH CRATES TO SALVAGE MATERIALS</div>
+    <div id="info-banner">⚙️ SIDE-PERSPECTIVE DEPTH ENGINE | WASD: MOVE (W/S moves depth into background) | AIM: MOUSE</div>
     <div id="loot-alert">📦 SEARCHING COLD STORAGE SUPPLY CRATE...</div>
 
     <div id="hud-container">
@@ -45,28 +44,54 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
         let inventory = { blades: 0, bindings: 0, alcohol: 0, rags: 0 };
-        let cameraOffset = { x: 0, y: 0 };
+        let cameraX = 0;
 
         let player = { 
-            worldX: 2000, 
-            worldY: 2000, 
-            size: 15, 
+            x: 300, 
+            y: 450, 
+            zDepth: 0, 
+            w: 24, 
+            h: 54, 
             speed: 3.5, 
-            angle: 0,
-            walkCycle: 0,
-            isMoving: false
+            facing: 1, 
+            walkCycle: 0, 
+            isMoving: false 
         };
         
         let mouse = { x: 0, y: 0 };
         let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+        // Procedural environmental generation data vectors
+        let entities = [];
+        for (let i = 0; i < 25; i++) {
+            let worldX = Math.random() * 4000;
+            let depthZone = Math.random() * 120 - 60;
+            entities.push({
+                type: 'wall',
+                worldX: worldX,
+                zDepth: depthZone,
+                w: Math.random() * 60 + 40,
+                h: Math.random() * 100 + 80, 
+                color: ['#1e293b', '#27272a', '#111827'][Math.floor(Math.random() * 3)]
+            });
+        }
+        for (let i = 0; i < 15; i++) {
+            entities.push({
+                type: 'crate',
+                worldX: Math.random() * 3800 + 100,
+                zDepth: Math.random() * 100 - 50,
+                w: 22,
+                h: 22,
+                looted: false,
+                lootProgress: 0,
+                lootType: ['blades', 'bindings', 'alcohol', 'rags'][Math.floor(Math.random() * 4)]
+            });
+        }
 
         window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
@@ -75,113 +100,53 @@
             mouse.x = e.clientX - rect.left;
             mouse.y = e.clientY - rect.top;
         });
-        let generatedChunks = {};
-        const CHUNK_SIZE = 600;
 
-        function getChunkObjects(chunkX, chunkY) {
-            let chunkId = `${chunkX},${chunkY}`;
-            if (generatedChunks[chunkId]) return generatedChunks[chunkId];
-
-            let objects = [];
-            let seed = Math.sin(chunkX * 12.9898 + chunkY * 78.233) * 43758.5453;
-            let random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-
-            let wallCount = Math.floor(random() * 3) + 3;
-            for (let i = 0; i < wallCount; i++) {
-                objects.push({
-                    type: 'wall',
-                    x: chunkX * CHUNK_SIZE + random() * (CHUNK_SIZE - 100) + 50,
-                    y: chunkY * CHUNK_SIZE + random() * (CHUNK_SIZE - 100) + 50,
-                    w: random() * 70 + 40,
-                    h: random() * 70 + 40,
-                    color: ['#1e293b', '#334155', '#111827'][Math.floor(random() * 3)]
-                });
-            }
-
-            let crateCount = Math.floor(random() * 2) + 1;
-            for (let i = 0; i < crateCount; i++) {
-                objects.push({
-                    type: 'crate',
-                    id: `${chunkId}-crate-${i}`,
-                    x: chunkX * CHUNK_SIZE + random() * (CHUNK_SIZE - 80) + 40,
-                    y: chunkY * CHUNK_SIZE + random() * (CHUNK_SIZE - 80) + 40,
-                    w: 20,
-                    h: 20,
-                    looted: false,
-                    lootProgress: 0,
-                    lootType: ['blades', 'bindings', 'alcohol', 'rags'][Math.floor(random() * 4)]
-                });
-            }
-
-            generatedChunks[chunkId] = objects;
-            return objects;
-        }
-
-        function getActiveObjects() {
-            let playerChunkX = Math.floor(player.worldX / CHUNK_SIZE);
-            let playerChunkY = Math.floor(player.worldY / CHUNK_SIZE);
-            
-            let activeList = [];
-            for (let cx = playerChunkX - 2; cx <= playerChunkX + 2; cx++) {
-                for (let cy = playerChunkY - 2; cy <= playerChunkY + 2; cy++) {
-                    activeList = activeList.concat(getChunkObjects(cx, cy));
-                }
-            }
-            return activeList;
-        }
-
-        function checkCollision(targetX, targetY) {
-            let activeObjects = getActiveObjects();
-            for (let obj of activeObjects) {
-                if (obj.type === 'wall') {
-                    if (targetX + player.size > obj.x && targetX - player.size < obj.x + obj.w &&
-                        targetY + player.size > obj.y && targetY - player.size < obj.y + obj.h) {
+        function checkCollision(targetWorldX, targetZ) {
+            for (let ent of entities) {
+                if (ent.type === 'wall') {
+                    if (targetWorldX + player.w/2 > ent.worldX && targetWorldX - player.w/2 < ent.worldX + ent.w &&
+                        targetZ + 15 > ent.zDepth && targetZ - 15 < ent.zDepth) {
                         return true;
                     }
                 }
             }
             return false;
         }
+
         function update() {
-            let nextWorldX = player.worldX;
-            let nextWorldY = player.worldY;
+            let nextWorldX = player.x;
+            let nextZ = player.zDepth;
             player.isMoving = false;
 
-            if (keys.w || keys.ArrowUp) { nextWorldY -= player.speed; player.isMoving = true; }
-            if (keys.s || keys.ArrowDown) { nextWorldY += player.speed; player.isMoving = true; }
-            if (keys.a || keys.ArrowLeft) { nextWorldX -= player.speed; player.isMoving = true; }
-            if (keys.d || keys.ArrowRight) { nextWorldX += player.speed; player.isMoving = true; }
+            if (keys.a || keys.ArrowLeft) { nextWorldX -= player.speed; player.facing = -1; player.isMoving = true; }
+            if (keys.d || keys.ArrowRight) { nextWorldX += player.speed; player.facing = 1; player.isMoving = true; }
+            if (keys.w || keys.ArrowUp) { nextZ -= player.speed * 0.6; player.isMoving = true; } 
+            if (keys.s || keys.ArrowDown) { nextZ += player.speed * 0.6; player.isMoving = true; } 
 
-            if (!checkCollision(nextWorldX, player.worldY)) player.worldX = nextWorldX;
-            if (!checkCollision(player.worldX, nextWorldY)) player.worldY = nextWorldY;
+            if (!checkCollision(nextWorldX, player.zDepth) && nextWorldX > 50) player.x = nextWorldX;
+            if (!checkCollision(player.x, nextZ) && nextZ > -70 && nextZ < 70) player.zDepth = nextZ;
 
-            if (player.isMoving) player.walkCycle += 0.22;
+            if (player.isMoving) player.walkCycle += 0.25;
             else player.walkCycle = 0;
 
-            cameraOffset.x = player.worldX - canvas.width / 2;
-            cameraOffset.y = player.worldY - canvas.height / 2;
-
-            let screenPlayerX = player.worldX - cameraOffset.x;
-            let screenPlayerY = player.worldY - cameraOffset.y;
-            player.angle = Math.atan2(mouse.y - screenPlayerY, mouse.x - screenPlayerX);
+            cameraX = player.x - canvas.width / 2;
 
             let alertBox = document.getElementById('loot-alert');
             let nearCrate = false;
-            let activeObjects = getActiveObjects();
 
-            for (let obj of activeObjects) {
-                if (obj.type === 'crate' && !obj.looted) {
-                    let dist = Math.sqrt(Math.pow(player.worldX - (obj.x + 10), 2) + Math.pow(player.worldY - (obj.y + 10), 2));
-                    if (dist < 45) {
+            for (let ent of entities) {
+                if (ent.type === 'crate' && !ent.looted) {
+                    let distance = Math.sqrt(Math.pow(player.x - ent.worldX, 2) + Math.pow(player.zDepth - ent.zDepth, 2));
+                    if (distance < 40) {
                         nearCrate = true;
-                        obj.lootProgress += 1.5;
+                        ent.lootProgress += 1.5;
                         alertBox.style.display = 'block';
-                        alertBox.innerText = `📦 SALVAGING CRATE... [${Math.floor(obj.lootProgress)}%]`;
+                        alertBox.innerText = `📦 SALVAGING SUPPLY CONTAINER... [${Math.floor(ent.lootProgress)}%]`;
 
-                        if (obj.lootProgress >= 100) {
-                            obj.looted = true;
-                            inventory[obj.lootType] += Math.floor(Math.random() * 2) + 1;
-                            document.getElementById(`inv-${obj.lootType}`).innerText = inventory[obj.lootType];
+                        if (ent.lootProgress >= 100) {
+                            ent.looted = true;
+                            inventory[ent.lootType] += Math.floor(Math.random() * 2) + 1;
+                            document.getElementById(`inv-${ent.lootType}`).innerText = inventory[ent.lootType];
                             alertBox.style.display = 'none';
                         }
                         break;
@@ -190,113 +155,90 @@
             }
             if (!nearCrate) alertBox.style.display = 'none';
         }
-
-        function drawShadowVolume(lightX, lightY, wall) {
-            let points = [
-                {x: wall.x - cameraOffset.x, y: wall.y - cameraOffset.y},
-                {x: (wall.x + wall.w) - cameraOffset.x, y: wall.y - cameraOffset.y},
-                {x: (wall.x + wall.w) - cameraOffset.x, y: (wall.y + wall.h) - cameraOffset.y},
-                {x: wall.x - cameraOffset.x, y: (wall.y + wall.h) - cameraOffset.y}
-            ];
-            ctx.fillStyle = 'rgba(2, 2, 4, 0.97)';
-            for (let i = 0; i < 4; i++) {
-                let p1 = points[i]; let p2 = points[(i + 1) % 4];
-                let angle1 = Math.atan2(p1.y - lightY, p1.x - lightX);
-                let angle2 = Math.atan2(p2.y - lightY, p2.x - lightX);
-                ctx.beginPath();
-                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-                ctx.lineTo(p2.x + Math.cos(angle2)*2000, p2.y + Math.sin(angle2)*2000);
-                ctx.lineTo(p1.x + Math.cos(angle1)*2000, p1.y + Math.sin(angle1)*2000);
-                ctx.closePath(); ctx.fill();
-            }
-        }
-
         function draw() {
-            ctx.fillStyle = '#040406';
+            ctx.fillStyle = '#040407';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = 'rgba(255,255,255,0.012)';
-            ctx.lineWidth = 1;
-            let startGridX = Math.floor(cameraOffset.x / 40) * 40;
-            let startGridY = Math.floor(cameraOffset.y / 40) * 40;
-            for (let x = startGridX - 40; x < startGridX + canvas.width + 40; x += 40) {
-                ctx.beginPath(); ctx.moveTo(x - cameraOffset.x, 0); ctx.lineTo(x - cameraOffset.x, canvas.height); ctx.stroke();
-            }
-            for (let y = startGridY - 40; y < startGridY + canvas.height + 40; y += 40) {
-                ctx.beginPath(); ctx.moveTo(0, y - cameraOffset.y); ctx.lineTo(canvas.width, y - cameraOffset.y); ctx.stroke();
-            }
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 450 - 75, canvas.width, 150);
 
-            let sPlayerX = player.worldX - cameraOffset.x;
-            let sPlayerY = player.worldY - cameraOffset.y;
+            let renderList = [...entities];
+            renderList.push({
+                type: 'player',
+                worldX: player.x,
+                zDepth: player.zDepth
+            });
+            renderList.sort((a, b) => a.zDepth - b.zDepth);
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(sPlayerX, sPlayerY);
-            ctx.arc(sPlayerX, sPlayerY, 460, player.angle - 0.40, player.angle + 0.40);
-            ctx.closePath();
-            let flashGradient = ctx.createRadialGradient(sPlayerX, sPlayerY, 5, sPlayerX, sPlayerY, 460);
-            flashGradient.addColorStop(0, 'rgba(255, 243, 210, 0.65)');
-            flashGradient.addColorStop(0.3, 'rgba(255, 243, 210, 0.28)');
-            flashGradient.addColorStop(0.7, 'rgba(215, 205, 180, 0.08)');
-            flashGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = flashGradient; ctx.fill();
-            ctx.restore();
+            for (let item of renderList) {
+                let screenX = item.worldX - cameraX;
+                let screenY = 450 + item.zDepth; 
 
-            let activeObjects = getActiveObjects();
-            for (let obj of activeObjects) {
-                if (obj.type === 'wall') drawShadowVolume(sPlayerX, sPlayerY, obj);
-            }
-
-            for (let obj of activeObjects) {
-                let rx = obj.x - cameraOffset.x;
-                let ry = obj.y - cameraOffset.y;
-                if (obj.type === 'wall') {
-                    ctx.fillStyle = obj.color;
-                    ctx.fillRect(rx, ry, obj.w, obj.h);
-                    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(rx, ry, obj.w, obj.h);
-                } else if (obj.type === 'crate' && !obj.looted) {
+                if (item.type === 'wall') {
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(screenX, screenY - item.h, item.w, item.h);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(screenX, screenY - item.h, item.w, item.h);
+                } 
+                else if (item.type === 'crate' && !item.looted) {
                     ctx.fillStyle = '#b45309';
-                    ctx.fillRect(rx, ry, obj.w, obj.h);
-                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(Date.now() * 0.007) * 0.4})`;
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(rx - 2, ry - 2, obj.w + 4, obj.h + 4);
+                    ctx.fillRect(screenX, screenY - item.h, item.w, item.h);
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(Date.now() * 0.008) * 0.4})`;
+                    ctx.strokeRect(screenX - 2, screenY - item.h - 2, item.w + 4, item.h + 4);
+                } 
+                else if (item.type === 'player') {
+                    ctx.save();
+                    ctx.translate(screenX, screenY);
+
+                    let dx = mouse.x - screenX;
+                    let dy = mouse.y - (screenY - 35);
+                    let aimAngle = Math.atan2(dy, dx);
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(0, -35); 
+                    ctx.arc(0, -35, 380, aimAngle - 0.35, aimAngle + 0.35);
+                    ctx.closePath();
+                    let flashGrad = ctx.createRadialGradient(0, -35, 5, 0, -35, 380);
+                    flashGrad.addColorStop(0, 'rgba(255, 245, 210, 0.55)');
+                    flashGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = flashGrad; ctx.fill();
+                    ctx.restore();
+
+                    let legSwing = Math.sin(player.walkCycle) * 10;
+                    ctx.fillStyle = '#1c1917'; 
+                    ctx.fillRect(-6 + legSwing, -10, 5, 10);
+                    ctx.fillRect(1 - legSwing, -10, 5, 10);
+
+                    ctx.fillStyle = '#1e3a5f'; 
+                    ctx.fillRect(-8, -42, 16, 32);
+                    ctx.fillStyle = '#3f3f46'; 
+                    ctx.fillRect(-7, -40, 14, 20);
+
+                    ctx.fillStyle = '#e4e4e7'; 
+                    ctx.fillRect(-5, -53, 10, 11);
+                    ctx.fillStyle = '#27272a'; 
+                    ctx.fillRect(-6, -55, 12, 4);
+
+                    ctx.translate(0, -32);
+                    ctx.rotate(aimAngle);
+                    ctx.fillStyle = '#09090b'; 
+                    ctx.fillRect(0, -2, 24, 4);
+                    ctx.fillStyle = '#f4f4f5'; 
+                    ctx.fillRect(18, -4, 4, 2);
+
+                    ctx.restore();
                 }
             }
 
-            ctx.save();
-            ctx.translate(sPlayerX, sPlayerY);
-            ctx.rotate(player.angle);
-            let stride = Math.sin(player.walkCycle) * 7;
-            ctx.fillStyle = '#1c1917';
-            ctx.fillRect(-8, -9 + stride, 7, 4);
-            ctx.fillRect(-8, 5 - stride, 7, 4);
-            ctx.fillStyle = '#27272a'; ctx.fillRect(-15, -7, 6, 14);
-            ctx.fillStyle = '#1e3a5f';
-            ctx.beginPath(); ctx.arc(-2, 0, player.size, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#3f3f46'; ctx.fillRect(-6, -8, 11, 16);
-            ctx.fillStyle = '#e4e4e7';
-            ctx.beginPath(); ctx.arc(-1, 0, 7, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#27272a'; ctx.fillRect(-4, -5, 6, 10);
-            ctx.fillStyle = '#1e3a5f'; ctx.fillRect(4, -8, 8, 4); ctx.fillRect(1, 4, 11, 4);
-            ctx.fillStyle = '#09090b'; ctx.fillRect(6, -2, 22, 3);
-            ctx.fillStyle = '#f4f4f5'; ctx.fillRect(22, -4, 4, 2);
-            ctx.restore();
-
             let vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/3, canvas.width/2, canvas.height/2, canvas.width/1.1);
             vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            vignette.addColorStop(0.6, 'rgba(2, 2, 5, 0.35)');
-            vignette.addColorStop(1, 'rgba(1, 1, 2, 0.96)');
+            vignette.addColorStop(1, 'rgba(1, 1, 2, 0.95)');
             ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
         gameLoop();
     </script>
 </body>
