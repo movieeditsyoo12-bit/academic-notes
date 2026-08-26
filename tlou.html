@@ -7,43 +7,36 @@
     <link rel="icon" type="image/x-icon" href="https://gstatic.com">
     <style>
         body { margin: 0; overflow: hidden; background-color: #030305; font-family: monospace; user-select: none; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0, 0, 0, 0.3); }
-        #screen-lock-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; text-align: center; background: rgba(5,5,8,0.9); padding: 25px 40px; border-radius: 6px; border: 1px solid #222; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        #hud-overlay { position: absolute; top: 20px; left: 20px; color: #a0aec0; background: rgba(0,0,0,0.6); padding: 8px 14px; border-radius: 4px; font-size: 11px; letter-spacing: 1px; pointer-events: none; }
+        #hud-overlay { position: absolute; top: 20px; left: 20px; color: #a0aec0; background: rgba(0,0,0,0.7); padding: 8px 14px; border-radius: 4px; font-size: 11px; letter-spacing: 1px; pointer-events: none; z-index: 10; border: 1px solid #222; }
     </style>
 </head>
 <body>
 
-    <div id="hud-overlay">🛡️ 3D RUNTIME ACTIVE | HP: <span style="color:#ef4444;font-weight:bold;">100%</span> | INVENTORY ACQUIRED | TAP ` TO DESTROY TAB</div>
-    <div id="crosshair"></div>
-    <div id="screen-lock-ui">
-        <h2 style="margin:0 0 10px 0; font-size:18px; letter-spacing:1px;">ENGAGE 3D HARDWARE LAYER</h2>
-        <p style="margin:0; font-size:12px; color:#777;">Click anywhere to capture mouse alignment & lock controls</p>
-    </div>
+    <div id="hud-overlay">🛡️ 3D RUNTIME ACTIVE | MOVE MOUSE TO LOOK | WASD TO WALK | TAP ` TO KILL TAB</div>
 
-    <!-- Core 3D Graphics Engine Core -->
+    <!-- Core 3D Graphics Library -->
     <script src="https://cloudflare.com"></script>
 
     <script>
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020204);
-        scene.fog = new THREE.FogExp2(0x020204, 0.07); // Volumetric environmental fog
+        scene.fog = new THREE.FogExp2(0x020204, 0.07); 
 
         const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // High-fidelity cinematic shadows
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
         document.body.appendChild(renderer.domElement);
 
-        // Ground Floor Texture Layer Map
+        // Ground Floor Environment
         const floorGeo = new THREE.PlaneGeometry(500, 500);
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f0f12, roughness: 0.85 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
-        // Procedural 3D Concrete Walls with Height parameters
+        // Procedural Concrete Wall Pillars
         const wallGeo = new THREE.BoxGeometry(2, 6, 2);
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x1c1c22, roughness: 0.9 });
         for (let i = 0; i < 40; i++) {
@@ -54,13 +47,13 @@
             scene.add(wall);
         }
 
-        // --- 3D SURVIVOR HUMANOID RIG ASSEMBLIES (Tactical Node Pivot) ---
+        // --- 3D SURVIVOR RIG (JOEL OVER-THE-SHOULDER NODE) ---
         const playerPivot = new THREE.Group();
         const playerMesh = new THREE.Group();
         playerPivot.add(playerMesh);
         scene.add(playerPivot);
 
-        // Core Torso Capsule
+        // Character Core Capsule
         const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.8, 16);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0x242b35, roughness: 0.7 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -68,20 +61,19 @@
         body.castShadow = true;
         playerMesh.add(body);
 
-        // Directional Looking Visor
+        // Facing Direction Visor Indicator
         const visorGeo = new THREE.BoxGeometry(0.2, 0.15, 0.3);
         const visorMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
         const visor = new THREE.Mesh(visorGeo, visorMat);
         visor.position.set(0, 1.4, -0.25);
         playerMesh.add(visor);
 
-        // --- LIGHTING SYSTEM & CINEMATIC SHADER FOREGROUNDS ---
+        // --- FLASHBEAM LIGHT SOURCES ---
         const ambientLight = new THREE.AmbientLight(0x040408, 0.6);
         scene.add(ambientLight);
 
-        // Volumetric Spotlight Flashlight Core
         const flashlight = new THREE.SpotLight(0xfff5e6, 18, 45, Math.PI / 6.5, 0.5, 1);
-        flashlight.position.set(0.2, 1.2, -0.2); // Right shoulder socket positioning
+        flashlight.position.set(0.2, 1.2, -0.2); 
         flashlight.castShadow = true;
         flashlight.shadow.mapSize.width = 1024;
         flashlight.shadow.mapSize.height = 1024;
@@ -90,36 +82,21 @@
         scene.add(lightTarget);
         flashlight.target = lightTarget;
         playerMesh.add(flashlight);
-        // --- SECURE MOUSE LOCK INITIALIZATION ---
-        const lockUI = document.getElementById('screen-lock-ui');
-        const crosshair = document.getElementById('crosshair');
-        let isLocked = false;
-
-        // Triggers pointer lock securely since it runs inside an un-sandboxed about:blank tab framework
-        lockUI.addEventListener('click', () => { document.body.requestPointerLock(); });
-
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === document.body) {
-                lockUI.style.display = 'none';
-                crosshair.style.display = 'block';
-                isLocked = true;
-            } else {
-                lockUI.style.display = 'block';
-                crosshair.style.display = 'none';
-                isLocked = false;
-            }
-        });
-
+        // --- CLICK-FREE INTERACTIVE MOUSE LOOK MAPPING ---
         let yaw = 0, pitch = 0;
-        document.addEventListener('mousemove', (e) => {
-            if (!isLocked) return;
-            yaw -= e.movementX * 0.0025;
-            pitch -= e.movementY * 0.0025;
-            pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch)); // Prevent flips
+        
+        window.addEventListener('mousemove', (e) => {
+            // Track the mouse coordinates relative to the window screen directly without clicking
+            const deltaX = (e.clientX - window.innerWidth / 2) * 0.005;
+            const deltaY = (e.clientY - window.innerHeight / 2) * 0.005;
+
+            yaw = -deltaX;
+            pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, -deltaY)); // Look boundaries
+            
             playerPivot.rotation.y = yaw;
         });
 
-        // Input Trackers
+        // Movement Keyboard Inputs
         const input = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = true; });
         window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = false; });
@@ -138,23 +115,23 @@
             if (moveX !== 0 || moveZ !== 0) {
                 const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
                 const dir = new THREE.Vector3(moveX / length, 0, moveZ / length);
-                // Translate move vectors relative to camera look angle matrices
+                // Align step coordinates to camera direction facing matrices
                 dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
                 playerPivot.position.addScaledVector(dir, playerSpeed);
             }
 
-            // Project Flashlight forward point vector maps
+            // Lock flashlight direction vectors straight ahead
             lightTarget.position.set(
                 playerPivot.position.x - Math.sin(yaw) * 15,
                 playerPivot.position.y + 1.2 + Math.sin(pitch) * 10,
                 playerPivot.position.z - Math.cos(yaw) * 15
             );
 
-            // True Third Person Over-The-Shoulder Camera Tracking Lerp Layout
+            // Over-The-Shoulder Cinematic Camera Placement
             const cameraOffset = new THREE.Vector3(0.8, 3.2, 5.0); 
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
             const targetCamPos = playerPivot.position.clone().add(cameraOffset);
-            camera.position.lerp(targetCamPos, 0.08); // Cinematic smooth dampening lag
+            camera.position.lerp(targetCamPos, 0.08); // Smooth movement lag
             
             const lookTarget = playerPivot.position.clone().add(new THREE.Vector3(-Math.sin(yaw) * 4, 1.2, -Math.cos(yaw) * 4));
             camera.lookAt(lookTarget);
@@ -172,5 +149,3 @@
     </script>
 </body>
 </html>
-
-
