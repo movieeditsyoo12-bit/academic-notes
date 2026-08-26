@@ -21,14 +21,14 @@
             pointer-events: none;
         }
         .inventory-slot { text-align: center; color: #94a3b8; font-size: 11px; letter-spacing: 1px; }
-        .inventory-count { font-size: 18px; font-weight: bold; color: #f1f5f9; margin-top: 2px; }
+        .inventory-count { font-size: 16px; font-weight: bold; color: #f1f5f9; margin-top: 2px; }
         #info-banner { position: absolute; top: 15px; left: 15px; color: #64748b; background: rgba(5,5,8,0.92); padding: 8px 14px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; }
-        #loot-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #fbbf24; font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 6px 16px; border-radius: 4px; border: 1px solid #d97706; display: none; pointer-events: none; }
+        #loot-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #fbbf24; font-size: 13px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 6px 16px; border-radius: 4px; border: 1px solid #d97706; display: none; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="info-banner">⚙️ SIDE-PERSPECTIVE DEPTH ENGINE | WASD: MOVE (W/S moves depth into background) | AIM: MOUSE</div>
+    <div id="info-banner">⚙️ LEVEL PASS ACTIVE | HEALTH: <span id="hp-display" style="color:#ef4444;font-weight:bold;">100</span>% | CRAFT KITS VIA BLUEPRINTS BELOW</div>
     <div id="loot-alert">📦 SEARCHING COLD STORAGE SUPPLY CRATE...</div>
 
     <div id="hud-container">
@@ -36,6 +36,7 @@
         <div class="inventory-slot">BINDINGS<div id="inv-bindings" class="inventory-count">0</div></div>
         <div class="inventory-slot">ALCOHOL<div id="inv-alcohol" class="inventory-count">0</div></div>
         <div class="inventory-slot">RAGS<div id="inv-rags" class="inventory-count">0</div></div>
+        <div class="inventory-slot" style="border-left:1px solid #334155; padding-left:12px;color:#fbbf24">SHIVS<div id="inv-shivs" class="inventory-count">0</div></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -48,48 +49,44 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        let inventory = { blades: 0, bindings: 0, alcohol: 0, rags: 0 };
+        let inventory = { blades: 0, bindings: 0, alcohol: 0, rags: 0, shivs: 0 };
+        let playerHealth = 100;
         let cameraX = 0;
 
         let player = { 
-            x: 300, 
-            y: 450, 
-            zDepth: 0, 
-            w: 24, 
-            h: 54, 
-            speed: 3.5, 
-            facing: 1, 
-            walkCycle: 0, 
-            isMoving: false 
+            x: 300, y: 450, zDepth: 0, w: 24, h: 54, 
+            speed: 3.5, walking: false, walkCycle: 0 
         };
         
         let mouse = { x: 0, y: 0 };
         let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-
-        // Procedural environmental generation data vectors
         let entities = [];
-        for (let i = 0; i < 25; i++) {
-            let worldX = Math.random() * 4000;
-            let depthZone = Math.random() * 120 - 60;
+        // Procedural generation parameters
+        for (let i = 0; i < 20; i++) {
             entities.push({
-                type: 'wall',
-                worldX: worldX,
-                zDepth: depthZone,
-                w: Math.random() * 60 + 40,
-                h: Math.random() * 100 + 80, 
-                color: ['#1e293b', '#27272a', '#111827'][Math.floor(Math.random() * 3)]
+                type: 'wall', worldX: Math.random() * 4500 + 200, zDepth: Math.random() * 110 - 55,
+                w: Math.random() * 60 + 40, h: Math.random() * 120 + 80,
+                color: ['#1e293b', '#27272a', '#0f172a'][Math.floor(Math.random() * 3)]
             });
         }
+
         for (let i = 0; i < 15; i++) {
             entities.push({
-                type: 'crate',
-                worldX: Math.random() * 3800 + 100,
-                zDepth: Math.random() * 100 - 50,
-                w: 22,
-                h: 22,
-                looted: false,
-                lootProgress: 0,
+                type: 'crate', worldX: Math.random() * 4300 + 200, zDepth: Math.random() * 100 - 50,
+                w: 22, h: 22, looted: false, lootProgress: 0,
                 lootType: ['blades', 'bindings', 'alcohol', 'rags'][Math.floor(Math.random() * 4)]
+            });
+        }
+
+        // --- SPAWNING CLICKERS / INFECTED PATROL SYSTEM ---
+        for (let i = 0; i < 8; i++) {
+            entities.push({
+                type: 'infected',
+                worldX: Math.random() * 3500 + 600,
+                zDepth: Math.random() * 100 - 50,
+                w: 24, h: 54, speed: 1.4,
+                aggro: false, walkCycle: Math.random() * 100,
+                state: 'patrol', direction: Math.random() > 0.5 ? 1 : -1
             });
         }
 
@@ -97,150 +94,166 @@
         window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
         window.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
+            mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top;
         });
 
-        function checkCollision(targetWorldX, targetZ) {
+        // Communication gateway to interface resource loops across parents
+        function sendInventoryToDashboard() {
+            window.parent.postMessage({ type: 'RESOURCE_UPDATE', inventory: inventory }, '*');
+        }
+
+        // Listens to commands coming from the main math sheet panel dashboard blueprints
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'EXECUTE_CRAFT') {
+                if (event.data.item === 'medkit' && inventory.alcohol > 0 && inventory.rags > 0) {
+                    inventory.alcohol--; inventory.rags--;
+                    playerHealth = Math.min(100, playerHealth + 40);
+                    document.getElementById('hp-display').innerText = playerHealth;
+                } else if (event.data.item === 'shiv' && inventory.blades > 0 && inventory.bindings > 0) {
+                    inventory.blades--; inventory.bindings--;
+                    inventory.shivs++;
+                    document.getElementById('inv-shivs').innerText = inventory.shivs;
+                }
+                // Refresh counts
+                ['blades', 'bindings', 'alcohol', 'rags'].forEach(t => {
+                    document.getElementById(`inv-${t}`).innerText = inventory[t];
+                });
+                sendInventoryToDashboard();
+            }
+        });
+
+        function checkCollision(tx, tz) {
             for (let ent of entities) {
                 if (ent.type === 'wall') {
-                    if (targetWorldX + player.w/2 > ent.worldX && targetWorldX - player.w/2 < ent.worldX + ent.w &&
-                        targetZ + 15 > ent.zDepth && targetZ - 15 < ent.zDepth) {
-                        return true;
-                    }
+                    if (tx + player.w/2 > ent.worldX && tx - player.w/2 < ent.worldX + ent.w &&
+                        tz + 15 > ent.zDepth && tz - 15 < ent.zDepth) return true;
                 }
             }
             return false;
         }
-
         function update() {
-            let nextWorldX = player.x;
-            let nextZ = player.zDepth;
-            player.isMoving = false;
+            let nx = player.x; let nz = player.zDepth; player.walking = false;
 
-            if (keys.a || keys.ArrowLeft) { nextWorldX -= player.speed; player.facing = -1; player.isMoving = true; }
-            if (keys.d || keys.ArrowRight) { nextWorldX += player.speed; player.facing = 1; player.isMoving = true; }
-            if (keys.w || keys.ArrowUp) { nextZ -= player.speed * 0.6; player.isMoving = true; } 
-            if (keys.s || keys.ArrowDown) { nextZ += player.speed * 0.6; player.isMoving = true; } 
+            if (keys.a || keys.ArrowLeft) { nx -= player.speed; player.walking = true; }
+            if (keys.d || keys.ArrowRight) { nx += player.speed; player.walking = true; }
+            if (keys.w || keys.ArrowUp) { nz -= player.speed * 0.5; player.walking = true; }
+            if (keys.s || keys.ArrowDown) { nz += player.speed * 0.5; player.walking = true; }
 
-            if (!checkCollision(nextWorldX, player.zDepth) && nextWorldX > 50) player.x = nextWorldX;
-            if (!checkCollision(player.x, nextZ) && nextZ > -70 && nextZ < 70) player.zDepth = nextZ;
+            if (!checkCollision(nx, player.zDepth) && nx > 50) player.x = nx;
+            if (!checkCollision(player.x, nz) && nz > -65 && nz < 65) player.zDepth = nz;
 
-            if (player.isMoving) player.walkCycle += 0.25;
-            else player.walkCycle = 0;
-
+            if (player.walking) player.walkCycle += 0.25;
             cameraX = player.x - canvas.width / 2;
 
-            let alertBox = document.getElementById('loot-alert');
-            let nearCrate = false;
-
+            // Process Loot Boxes
+            let alertBox = document.getElementById('loot-alert'); let nearCrate = false;
             for (let ent of entities) {
                 if (ent.type === 'crate' && !ent.looted) {
-                    let distance = Math.sqrt(Math.pow(player.x - ent.worldX, 2) + Math.pow(player.zDepth - ent.zDepth, 2));
-                    if (distance < 40) {
-                        nearCrate = true;
-                        ent.lootProgress += 1.5;
+                    let d = Math.sqrt(Math.pow(player.x - ent.worldX, 2) + Math.pow(player.zDepth - ent.zDepth, 2));
+                    if (d < 40) {
+                        nearCrate = true; ent.lootProgress += 1.2;
                         alertBox.style.display = 'block';
-                        alertBox.innerText = `📦 SALVAGING SUPPLY CONTAINER... [${Math.floor(ent.lootProgress)}%]`;
-
+                        alertBox.innerText = `📦 SALVAGING COLD STORAGE... [${Math.floor(ent.lootProgress)}%]`;
                         if (ent.lootProgress >= 100) {
-                            ent.looted = true;
-                            inventory[ent.lootType] += Math.floor(Math.random() * 2) + 1;
+                            ent.looted = true; inventory[ent.lootType] += Math.floor(Math.random() * 2) + 1;
                             document.getElementById(`inv-${ent.lootType}`).innerText = inventory[ent.lootType];
-                            alertBox.style.display = 'none';
+                            sendInventoryToDashboard();
                         }
                         break;
                     }
                 }
             }
             if (!nearCrate) alertBox.style.display = 'none';
+
+            // --- INFECTED CLICKER AI RUNTIME PATTERNS ---
+            for (let ent of entities) {
+                if (ent.type === 'infected') {
+                    ent.walkCycle += 0.15;
+                    let distToPlayer = Math.sqrt(Math.pow(player.x - ent.worldX, 2) + Math.pow(player.zDepth - ent.zDepth, 2));
+
+                    if (distToPlayer < 180) ent.aggro = true; // Alerted by flashlight proximity radius
+
+                    if (ent.aggro) {
+                        // Chase vectors tracking character coordinates directly
+                        if (ent.worldX < player.x) ent.worldX += ent.speed * 1.5;
+                        else ent.worldX -= ent.speed * 1.5;
+
+                        if (ent.zDepth < player.zDepth) ent.zDepth += ent.speed * 0.8;
+                        else ent.zDepth -= ent.speed * 0.8;
+
+                        // Contact damage tracking
+                        if (distToPlayer < 25) {
+                            if (inventory.shivs > 0) {
+                                inventory.shivs--; // Automatically burn shiv defense asset to kill target instantly
+                                document.getElementById('inv-shivs').innerText = inventory.shivs;
+                                ent.worldX = -9999; // Move dead infected out of view bounds
+                            } else {
+                                playerHealth = Math.max(0, playerHealth - 0.4); // Drain health points
+                                document.getElementById('hp-display').innerText = Math.floor(playerHealth);
+                            }
+                        }
+                    } else {
+                        // Regular slow blind patrol walking cycle patterns
+                        ent.worldX += ent.speed * ent.direction;
+                        if (Math.random() < 0.01) ent.direction *= -1; // Random flip paths
+                    }
+                }
+            }
         }
+
         function draw() {
-            ctx.fillStyle = '#040407';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#040406'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#09090d'; ctx.fillRect(0, 450 - 70, canvas.width, 140); // Floor zone
 
-            ctx.fillStyle = '#0a0a0f';
-            ctx.fillRect(0, 450 - 75, canvas.width, 150);
-
-            let renderList = [...entities];
-            renderList.push({
-                type: 'player',
-                worldX: player.x,
-                zDepth: player.zDepth
-            });
+            let renderList = [...entities, { type: 'player', worldX: player.x, zDepth: player.zDepth }];
             renderList.sort((a, b) => a.zDepth - b.zDepth);
 
             for (let item of renderList) {
-                let screenX = item.worldX - cameraX;
-                let screenY = 450 + item.zDepth; 
-
+                let sx = item.worldX - cameraX; let sy = 450 + item.zDepth;
                 if (item.type === 'wall') {
-                    ctx.fillStyle = item.color;
-                    ctx.fillRect(screenX, screenY - item.h, item.w, item.h);
-                    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(screenX, screenY - item.h, item.w, item.h);
-                } 
-                else if (item.type === 'crate' && !item.looted) {
-                    ctx.fillStyle = '#b45309';
-                    ctx.fillRect(screenX, screenY - item.h, item.w, item.h);
-                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(Date.now() * 0.008) * 0.4})`;
-                    ctx.strokeRect(screenX - 2, screenY - item.h - 2, item.w + 4, item.h + 4);
-                } 
-                else if (item.type === 'player') {
-                    ctx.save();
-                    ctx.translate(screenX, screenY);
-
-                    let dx = mouse.x - screenX;
-                    let dy = mouse.y - (screenY - 35);
-                    let aimAngle = Math.atan2(dy, dx);
-
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.moveTo(0, -35); 
-                    ctx.arc(0, -35, 380, aimAngle - 0.35, aimAngle + 0.35);
-                    ctx.closePath();
-                    let flashGrad = ctx.createRadialGradient(0, -35, 5, 0, -35, 380);
-                    flashGrad.addColorStop(0, 'rgba(255, 245, 210, 0.55)');
-                    flashGrad.addColorStop(1, 'rgba(0,0,0,0)');
-                    ctx.fillStyle = flashGrad; ctx.fill();
+                    ctx.fillStyle = item.color; ctx.fillRect(sx, sy - item.h, item.w, item.h);
+                } else if (item.type === 'crate' && !item.looted) {
+                    ctx.fillStyle = '#b45309'; ctx.fillRect(sx, sy - item.h, item.w, item.h);
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(Date.now()*0.007)*0.4})`;
+                    ctx.strokeRect(sx-2, sy-item.h-2, item.w+4, item.h+4);
+                } else if (item.type === 'infected' && item.worldX > -1000) {
+                    // --- INFECTED RENDERING RIG ---
+                    ctx.save(); ctx.translate(sx, sy);
+                    let sw = Math.sin(item.walkCycle)*8;
+                    ctx.fillStyle = '#1c1917'; ctx.fillRect(-5+sw, -8, 4, 8); ctx.fillRect(1-sw, -8, 4, 8); // Legs
+                    ctx.fillStyle = item.aggro ? '#991b1b' : '#1e3a1e'; ctx.fillRect(-8, -42, 16, 34); // Fungal Torso Layer
+                    ctx.fillStyle = '#a1a1aa'; ctx.fillRect(-4, -50, 8, 9); // Head
+                    ctx.fillStyle = '#fbbf24'; ctx.fillRect(-5, -53, 10, 4); // Fungal Growth Cap
                     ctx.restore();
+                } else if (item.type === 'player') {
+                    ctx.save(); ctx.translate(sx, sy);
+                    let aimAngle = Math.atan2(mouse.y-(sy-35), mouse.x-sx);
 
-                    let legSwing = Math.sin(player.walkCycle) * 10;
-                    ctx.fillStyle = '#1c1917'; 
-                    ctx.fillRect(-6 + legSwing, -10, 5, 10);
-                    ctx.fillRect(1 - legSwing, -10, 5, 10);
+                    ctx.save(); ctx.beginPath(); ctx.moveTo(0, -35); ctx.arc(0, -35, 380, aimAngle-0.35, aimAngle+0.35); ctx.closePath();
+                    let g = ctx.createRadialGradient(0,-35,5,0,-35,380); g.addColorStop(0,'rgba(255,245,210,0.5)'); g.addColorStop(1,'rgba(0,0,0,0)');
+                    ctx.fillStyle = g; ctx.fill(); ctx.restore();
 
-                    ctx.fillStyle = '#1e3a5f'; 
-                    ctx.fillRect(-8, -42, 16, 32);
-                    ctx.fillStyle = '#3f3f46'; 
-                    ctx.fillRect(-7, -40, 14, 20);
-
-                    ctx.fillStyle = '#e4e4e7'; 
-                    ctx.fillRect(-5, -53, 10, 11);
-                    ctx.fillStyle = '#27272a'; 
-                    ctx.fillRect(-6, -55, 12, 4);
-
-                    ctx.translate(0, -32);
-                    ctx.rotate(aimAngle);
-                    ctx.fillStyle = '#09090b'; 
-                    ctx.fillRect(0, -2, 24, 4);
-                    ctx.fillStyle = '#f4f4f5'; 
-                    ctx.fillRect(18, -4, 4, 2);
-
+                    let sw = Math.sin(player.walkCycle)*10;
+                    ctx.fillStyle = '#1c1917'; ctx.fillRect(-6+sw, -10, 5, 10); ctx.fillRect(1-sw, -10, 5, 10);
+                    ctx.fillStyle = '#1e3a5f'; ctx.fillRect(-8, -42, 16, 32);
+                    ctx.fillStyle = '#3f3f46'; ctx.fillRect(-7, -40, 14, 20);
+                    ctx.fillStyle = '#e4e4e7'; ctx.fillRect(-5, -53, 10, 11);
+                    ctx.fillStyle = '#27272a'; ctx.fillRect(-6, -55, 12, 4);
+                    ctx.translate(0, -32); ctx.rotate(aimAngle);
+                    ctx.fillStyle = '#09090b'; ctx.fillRect(0, -2, 24, 4);
                     ctx.restore();
                 }
             }
-
-            let vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/3, canvas.width/2, canvas.height/2, canvas.width/1.1);
-            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            vignette.addColorStop(1, 'rgba(1, 1, 2, 0.95)');
-            ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            let vig = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/3, canvas.width/2, canvas.height/2, canvas.width/1.1);
+            vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(1,1,2,0.96)');
+            ctx.fillStyle = vig; ctx.fillRect(0,0,canvas.width,canvas.height);
         }
 
-        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
-        gameLoop();
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        loop();
+        sendInventoryToDashboard(); // Establish base communication hooks on initialization frames
     </script>
 </body>
 </html>
+
 
