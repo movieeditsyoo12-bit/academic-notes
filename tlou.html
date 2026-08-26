@@ -3,135 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL Engine Test</title>
+    <title>WebGL Plane System</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #030305; font-family: monospace; user-select: none; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0, 0, 0, 0.5); }
-        #instructions { position: absolute; top: 15px; left: 15px; color: #fff; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 4px; font-size: 11px; pointer-events: none; border: 1px solid #333; }
+        body { margin: 0; overflow: hidden; background-color: #020204; font-family: sans-serif; user-select: none; }
+        #hud { position: absolute; top: 15px; left: 15px; color: #fff; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; font-size: 12px; border: 1px solid #333; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="crosshair"></div>
-    <div id="instructions">🕹️ RENDER RUNTIME PASS: MOVE MOUSE OVER CANVAS TO LOOK / WASD TO WALK</div>
+    <div id="hud">⚡ VECTOR RUNTIME RUNNING | WALKING: WASD or Arrows</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cloudflare.com"></script>
 
     <script>
-        // --- 1. CORE THREEJS ENGINE PIPELINE ---
+        // --- WebGL Core ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020204);
-        scene.fog = new THREE.FogExp2(0x020204, 0.09);
+        scene.fog = new THREE.FogExp2(0x020204, 0.08);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Fixed Top-Down Over-the-shoulder angle (Bypasses clicking/mouse restrictions completely)
+        camera.position.set(0, 12, 10);
+        camera.lookAt(0, 0, 0);
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // --- 2. SURVIVAL WORLD ENVIRONMENT MAP ---
-        const floorGeo = new THREE.PlaneGeometry(400, 400);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f0f13, roughness: 0.9 });
+        // --- Ground Plane ---
+        const floorGeo = new THREE.PlaneGeometry(300, 300);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.9 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        const pillarGeo = new THREE.BoxGeometry(1.5, 6, 1.5);
+        // --- Scattered Post-Apocalyptic Pillars ---
+        const pillarGeo = new THREE.BoxGeometry(1.2, 5, 1.2);
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1c1c22, roughness: 1.0 });
-        for (let i = 0; i < 35; i++) {
+        for (let i = 0; i < 30; i++) {
             const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-            pillar.position.set((Math.random() - 0.5) * 80, 3, (Math.random() - 0.5) * 80);
+            pillar.position.set((Math.random() - 0.5) * 60, 2.5, (Math.random() - 0.5) * 60);
             pillar.castShadow = true;
             pillar.receiveShadow = true;
             scene.add(pillar);
         }
 
-        // --- 3. CHARACTER PLAYER ASSEMBLIES ---
-        const playerPivot = new THREE.Group();
-        const playerMesh = new THREE.Group();
-        playerPivot.add(playerMesh);
-        scene.add(playerPivot);
-        
-        const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.8, 16);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x242b35, roughness: 0.7 });
+        // --- Survival Capsule Character ---
+        const player = new THREE.Group();
+        scene.add(player);
+
+        const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 16);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x242b35, roughness: 0.6 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
         body.position.y = 0.9;
         body.castShadow = true;
-        playerMesh.add(body);
+        player.add(body);
 
-        const visorGeo = new THREE.BoxGeometry(0.2, 0.15, 0.3);
-        const visorMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        // Facing indicator
+        const visorGeo = new THREE.BoxGeometry(0.2, 0.2, 0.4);
+        const visorMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
         const visor = new THREE.Mesh(visorGeo, visorMat);
-        visor.position.set(0, 1.4, -0.25);
-        playerMesh.add(visor);
+        visor.position.set(0, 1.4, -0.3);
+        player.add(visor);
 
-        // --- 4. LIGHTING SYSTEM & TRACKING TARGETS ---
-        const ambientLight = new THREE.AmbientLight(0x040408, 0.8);
+        // --- Atmospheric Lighting & Flashlight ---
+        const ambientLight = new THREE.AmbientLight(0x040408, 1.2);
         scene.add(ambientLight);
 
-        const flashlight = new THREE.SpotLight(0xfff5e6, 15, 40, Math.PI / 7, 0.5, 1);
-        flashlight.position.set(0.2, 1.2, -0.2);
+        const flashlight = new THREE.SpotLight(0xfff5e6, 18, 35, Math.PI / 6, 0.5, 1);
+        flashlight.position.set(0, 1.2, -0.2);
         flashlight.castShadow = true;
         
         const lightTarget = new THREE.Object3D();
         scene.add(lightTarget);
         flashlight.target = lightTarget;
-        playerMesh.add(flashlight);
+        player.add(flashlight);
 
-        // --- 5. SECURED LOOK TRACKING OVERLAY (IFRAME SAFE) ---
-        let yaw = 0, pitch = 0;
+        // --- Simple Direct Movement Inputs ---
+        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+        window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
 
-        // Bypasses the strict PointerLock restrictions. 
-        // Simply dragging or moving your mouse across the canvas rotates your camera layout automatically
-        window.addEventListener('mousemove', (e) => {
-            // Calculate direction using canvas offset angles
-            const deltaX = (e.clientX - window.innerWidth / 2) * 0.0035;
-            const deltaY = (e.clientY - window.innerHeight / 2) * 0.0035;
+        const speed = 0.12;
 
-            yaw = -deltaX;
-            pitch = Math.max(-Math.PI / 5, Math.min(Math.PI / 5, -deltaY));
-            
-            playerPivot.rotation.y = yaw;
-        });
+        function loop() {
+            requestAnimationFrame(loop);
 
-        // --- 6. MOVEMENT ENGINE INTERFACES ---
-        const input = { w: false, a: false, s: false, d: false };
-        window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = true; });
-        window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = false; });
+            let mx = 0;
+            let mz = 0;
 
-        const speed = 0.09;
-        function renderFrame() {
-            requestAnimationFrame(renderFrame);
-            let moveX = 0, moveZ = 0;
-            if (input.w) moveZ -= 1;
-            if (input.s) moveZ += 1;
-            if (input.a) moveX -= 1;
-            if (input.d) moveX += 1;
+            if (keys.w || keys.ArrowUp) mz -= 1;
+            if (keys.s || keys.ArrowDown) mz += 1;
+            if (keys.a || keys.ArrowLeft) mx -= 1;
+            if (keys.d || keys.ArrowRight) mx += 1;
 
-            if (moveX !== 0 || moveZ !== 0) {
-                const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
-                const directionVector = new THREE.Vector3(moveX / length, 0, moveZ / length);
-                directionVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-                playerPivot.position.addScaledVector(directionVector, speed);
+            if (mx !== 0 || mz !== 0) {
+                const length = Math.sqrt(mx * mx + mz * mz);
+                const dx = (mx / length) * speed;
+                const dz = (mz / length) * speed;
+
+                player.position.x += dx;
+                player.position.z += dz;
+
+                // Turn the player mesh instantly toward the movement vectors
+                player.rotation.y = Math.atan2(dx, dz);
             }
 
-            // Project the flashlight positioning points forward
+            // Lock flashlight to cast directly forward wherever character steps
             lightTarget.position.set(
-                playerPivot.position.x - Math.sin(yaw) * 15,
-                playerPivot.position.y + 1.2 + Math.sin(pitch) * 10,
-                playerPivot.position.z - Math.cos(yaw) * 15
+                player.position.x - Math.sin(player.rotation.y) * 10,
+                0.5,
+                player.position.z - Math.cos(player.rotation.y) * 10
             );
 
-            // Follow-Camera Lerp Physics
-            const cameraOffset = new THREE.Vector3(0.7, 3.2, 5.0); 
-            cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-            const targetCamPos = playerPivot.position.clone().add(cameraOffset);
-            camera.position.lerp(targetCamPos, 0.1);
-            
-            const lookTarget = playerPivot.position.clone().add(new THREE.Vector3(-Math.sin(yaw) * 4, 1.2, -Math.cos(yaw) * 4));
-            camera.lookAt(lookTarget);
+            // Camera smoothly locks onto player positions from above
+            camera.position.set(player.position.x, player.position.y + 11, player.position.z + 9);
+            camera.lookAt(player.position.x, player.position.y, player.position.z - 2);
+
             renderer.render(scene, camera);
         }
 
@@ -141,8 +131,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        renderFrame();
+        loop();
     </script>
 </body>
 </html>
-
