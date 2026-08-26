@@ -3,23 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Module 04A - Array Map Renderer</title>
+    <title>Module 04A - Endless Terrain Data Processor</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #050508; overflow: hidden; font-family: monospace; user-select: none; }
-        canvas { display: block; width: 100%; height: 100vh; background-color: #07070b; }
-        #hud { position: absolute; top: 15px; left: 15px; color: #8e9aa8; background: rgba(10,10,15,0.85); padding: 8px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; }
+        body { margin: 0; padding: 0; background-color: #020203; overflow: hidden; font-family: 'Courier New', Courier, monospace; user-select: none; }
+        canvas { display: block; width: 100%; height: 100vh; background-color: #030305; }
+        #hud-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(7, 8, 12, 0.9);
+            border: 1px solid #1e293b;
+            padding: 12px 24px;
+            border-radius: 6px;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+        .inventory-slot { text-align: center; color: #94a3b8; font-size: 11px; letter-spacing: 1px; }
+        .inventory-count { font-size: 18px; font-weight: bold; color: #f1f5f9; margin-top: 2px; }
+        #info-banner { position: absolute; top: 15px; left: 15px; color: #64748b; background: rgba(5,5,8,0.92); padding: 8px 14px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; letter-spacing: 1px; }
+        #loot-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #fbbf24; font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 6px 16px; border-radius: 4px; border: 1px solid #d97706; display: none; pointer-events: none; box-shadow: 0 0 10px rgba(217,119,6,0.3); }
     </style>
 </head>
 <body>
 
-    <div id="hud">📦 GRAPH ENGINE RUNNING | WALK: WASD / ARROWS | AIM: MOVE MOUSE</div>
+    <div id="info-banner">⚙️ PROCEDURAL APOCALYPSE WORLD | WASD: MOVE | AIM MOUSE | APPROACH CRATES TO SALVAGE MATERIALS</div>
+    <div id="loot-alert">📦 SEARCHING COLD STORAGE SUPPLY CRATE...</div>
+
+    <div id="hud-container">
+        <div class="inventory-slot">BLADES<div id="inv-blades" class="inventory-count">0</div></div>
+        <div class="inventory-slot">BINDINGS<div id="inv-bindings" class="inventory-count">0</div></div>
+        <div class="inventory-slot">ALCOHOL<div id="inv-alcohol" class="inventory-count">0</div></div>
+        <div class="inventory-slot">RAGS<div id="inv-rags" class="inventory-count">0</div></div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Set canvas to full screen size inside the frame container
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -27,23 +52,22 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Game State Variables
-        let player = { x: canvas.width / 2, y: canvas.height / 2, size: 14, speed: 3.5, angle: 0 };
-        let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+        let inventory = { blades: 0, bindings: 0, alcohol: 0, rags: 0 };
+        let cameraOffset = { x: 0, y: 0 };
+
+        let player = { 
+            worldX: 2000, 
+            worldY: 2000, 
+            size: 15, 
+            speed: 3.5, 
+            angle: 0,
+            walkCycle: 0,
+            isMoving: false
+        };
+        
+        let mouse = { x: 0, y: 0 };
         let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
-        // Generate static post-apocalyptic obstacles/ruins
-        let obstacles = [];
-        for (let i = 0; i < 20; i++) {
-            obstacles.push({
-                x: Math.random() * (window.innerWidth - 100) + 50,
-                y: Math.random() * (window.innerHeight - 100) + 50,
-                w: Math.random() * 40 + 20,
-                h: Math.random() * 40 + 20
-            });
-        }
-
-        // Input Trackers (Completely click-free)
         window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
         window.addEventListener('mousemove', (e) => {
@@ -51,94 +75,222 @@
             mouse.x = e.clientX - rect.left;
             mouse.y = e.clientY - rect.top;
         });
+        let generatedChunks = {};
+        const CHUNK_SIZE = 600;
 
-        // Simple AABB Collision Detection Rule
-        function checkCollision(px, py, size) {
-            for (let obs of obstacles) {
-                if (px + size > obs.x && px - size < obs.x + obs.w &&
-                    py + size > obs.y && py - size < obs.y + obs.h) {
-                    return true;
+        function getChunkObjects(chunkX, chunkY) {
+            let chunkId = `${chunkX},${chunkY}`;
+            if (generatedChunks[chunkId]) return generatedChunks[chunkId];
+
+            let objects = [];
+            let seed = Math.sin(chunkX * 12.9898 + chunkY * 78.233) * 43758.5453;
+            let random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+
+            let wallCount = Math.floor(random() * 3) + 3;
+            for (let i = 0; i < wallCount; i++) {
+                objects.push({
+                    type: 'wall',
+                    x: chunkX * CHUNK_SIZE + random() * (CHUNK_SIZE - 100) + 50,
+                    y: chunkY * CHUNK_SIZE + random() * (CHUNK_SIZE - 100) + 50,
+                    w: random() * 70 + 40,
+                    h: random() * 70 + 40,
+                    color: ['#1e293b', '#334155', '#111827'][Math.floor(random() * 3)]
+                });
+            }
+
+            let crateCount = Math.floor(random() * 2) + 1;
+            for (let i = 0; i < crateCount; i++) {
+                objects.push({
+                    type: 'crate',
+                    id: `${chunkId}-crate-${i}`,
+                    x: chunkX * CHUNK_SIZE + random() * (CHUNK_SIZE - 80) + 40,
+                    y: chunkY * CHUNK_SIZE + random() * (CHUNK_SIZE - 80) + 40,
+                    w: 20,
+                    h: 20,
+                    looted: false,
+                    lootProgress: 0,
+                    lootType: ['blades', 'bindings', 'alcohol', 'rags'][Math.floor(random() * 4)]
+                });
+            }
+
+            generatedChunks[chunkId] = objects;
+            return objects;
+        }
+
+        function getActiveObjects() {
+            let playerChunkX = Math.floor(player.worldX / CHUNK_SIZE);
+            let playerChunkY = Math.floor(player.worldY / CHUNK_SIZE);
+            
+            let activeList = [];
+            for (let cx = playerChunkX - 2; cx <= playerChunkX + 2; cx++) {
+                for (let cy = playerChunkY - 2; cy <= playerChunkY + 2; cy++) {
+                    activeList = activeList.concat(getChunkObjects(cx, cy));
+                }
+            }
+            return activeList;
+        }
+
+        function checkCollision(targetX, targetY) {
+            let activeObjects = getActiveObjects();
+            for (let obj of activeObjects) {
+                if (obj.type === 'wall') {
+                    if (targetX + player.size > obj.x && targetX - player.size < obj.x + obj.w &&
+                        targetY + player.size > obj.y && targetY - player.size < obj.y + obj.h) {
+                        return true;
+                    }
                 }
             }
             return false;
         }
-
-        // Main Physics Update Loops
         function update() {
-            let nextX = player.x;
-            let nextY = player.y;
+            let nextWorldX = player.worldX;
+            let nextWorldY = player.worldY;
+            player.isMoving = false;
 
-            if (keys.w || keys.ArrowUp) nextY -= player.speed;
-            if (keys.s || keys.ArrowDown) nextY += player.speed;
-            if (keys.a || keys.ArrowLeft) nextX -= player.speed;
-            if (keys.d || keys.ArrowRight) nextX += player.speed;
+            if (keys.w || keys.ArrowUp) { nextWorldY -= player.speed; player.isMoving = true; }
+            if (keys.s || keys.ArrowDown) { nextWorldY += player.speed; player.isMoving = true; }
+            if (keys.a || keys.ArrowLeft) { nextWorldX -= player.speed; player.isMoving = true; }
+            if (keys.d || keys.ArrowRight) { nextWorldX += player.speed; player.isMoving = true; }
 
-            // Apply movement borders and block wall collisions
-            if (!checkCollision(nextX, player.y, player.size) && nextX > player.size && nextX < canvas.width - player.size) {
-                player.x = nextX;
+            if (!checkCollision(nextWorldX, player.worldY)) player.worldX = nextWorldX;
+            if (!checkCollision(player.worldX, nextWorldY)) player.worldY = nextWorldY;
+
+            if (player.isMoving) player.walkCycle += 0.22;
+            else player.walkCycle = 0;
+
+            cameraOffset.x = player.worldX - canvas.width / 2;
+            cameraOffset.y = player.worldY - canvas.height / 2;
+
+            let screenPlayerX = player.worldX - cameraOffset.x;
+            let screenPlayerY = player.worldY - cameraOffset.y;
+            player.angle = Math.atan2(mouse.y - screenPlayerY, mouse.x - screenPlayerX);
+
+            let alertBox = document.getElementById('loot-alert');
+            let nearCrate = false;
+            let activeObjects = getActiveObjects();
+
+            for (let obj of activeObjects) {
+                if (obj.type === 'crate' && !obj.looted) {
+                    let dist = Math.sqrt(Math.pow(player.worldX - (obj.x + 10), 2) + Math.pow(player.worldY - (obj.y + 10), 2));
+                    if (dist < 45) {
+                        nearCrate = true;
+                        obj.lootProgress += 1.5;
+                        alertBox.style.display = 'block';
+                        alertBox.innerText = `📦 SALVAGING CRATE... [${Math.floor(obj.lootProgress)}%]`;
+
+                        if (obj.lootProgress >= 100) {
+                            obj.looted = true;
+                            inventory[obj.lootType] += Math.floor(Math.random() * 2) + 1;
+                            document.getElementById(`inv-${obj.lootType}`).innerText = inventory[obj.lootType];
+                            alertBox.style.display = 'none';
+                        }
+                        break;
+                    }
+                }
             }
-            if (!checkCollision(player.x, nextY, player.size) && nextY > player.size && nextY < canvas.height - player.size) {
-                player.y = nextY;
-            }
-
-            // Calculate rotation angle tracking the mouse cursor
-            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            if (!nearCrate) alertBox.style.display = 'none';
         }
 
-        // Tactical 2D Flashlight Raycasting Render Pipeline
+        function drawShadowVolume(lightX, lightY, wall) {
+            let points = [
+                {x: wall.x - cameraOffset.x, y: wall.y - cameraOffset.y},
+                {x: (wall.x + wall.w) - cameraOffset.x, y: wall.y - cameraOffset.y},
+                {x: (wall.x + wall.w) - cameraOffset.x, y: (wall.y + wall.h) - cameraOffset.y},
+                {x: wall.x - cameraOffset.x, y: (wall.y + wall.h) - cameraOffset.y}
+            ];
+            ctx.fillStyle = 'rgba(2, 2, 4, 0.97)';
+            for (let i = 0; i < 4; i++) {
+                let p1 = points[i]; let p2 = points[(i + 1) % 4];
+                let angle1 = Math.atan2(p1.y - lightY, p1.x - lightX);
+                let angle2 = Math.atan2(p2.y - lightY, p2.x - lightX);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                ctx.lineTo(p2.x + Math.cos(angle2)*2000, p2.y + Math.sin(angle2)*2000);
+                ctx.lineTo(p1.x + Math.cos(angle1)*2000, p1.y + Math.sin(angle1)*2000);
+                ctx.closePath(); ctx.fill();
+            }
+        }
+
         function draw() {
-            // 1. Reset dark apocalypse background canvas
-            ctx.fillStyle = '#06060a';
+            ctx.fillStyle = '#040406';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Draw The Tactical Flashlight Cone (The Last of Us ambiance)
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(player.x, player.y);
-            // Flashlight properties: 35-degree beam angle, spreading out 260 pixels
-            ctx.arc(player.x, player.y, 260, player.angle - 0.35, player.angle + 0.35);
-            ctx.closePath();
-            
-            // Create a realistic flashlight beam drop-off gradient shadow
-            let lightGradient = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 260);
-            lightGradient.addColorStop(0, 'rgba(255, 248, 220, 0.45)');
-            lightGradient.addColorStop(0.6, 'rgba(255, 248, 220, 0.15)');
-            lightGradient.addColorStop(1, 'rgba(255, 248, 220, 0)');
-            
-            ctx.fillStyle = lightGradient;
-            ctx.fill();
-            ctx.restore();
-
-            // 3. Draw Ruined Obstacles / Barriers
-            ctx.fillStyle = '#1e293b';
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 2;
-            for (let obs of obstacles) {
-                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            ctx.strokeStyle = 'rgba(255,255,255,0.012)';
+            ctx.lineWidth = 1;
+            let startGridX = Math.floor(cameraOffset.x / 40) * 40;
+            let startGridY = Math.floor(cameraOffset.y / 40) * 40;
+            for (let x = startGridX - 40; x < startGridX + canvas.width + 40; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x - cameraOffset.x, 0); ctx.lineTo(x - cameraOffset.x, canvas.height); ctx.stroke();
+            }
+            for (let y = startGridY - 40; y < startGridY + canvas.height + 40; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y - cameraOffset.y); ctx.lineTo(canvas.width, y - cameraOffset.y); ctx.stroke();
             }
 
-            // 4. Draw Player Character Template (Tactical Survivor Circle + Weapon Indicator)
+            let sPlayerX = player.worldX - cameraOffset.x;
+            let sPlayerY = player.worldY - cameraOffset.y;
+
             ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-
-            // Draw player outer ring body
             ctx.beginPath();
-            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
-            ctx.fillStyle = '#38bdf8'; // Tactical Cyan/Blue
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 3;
-            ctx.fill();
-            ctx.stroke();
-
-            // Draw flashlight/weapon aiming handle direction indicator
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(6, -3, 8, 6);
+            ctx.moveTo(sPlayerX, sPlayerY);
+            ctx.arc(sPlayerX, sPlayerY, 460, player.angle - 0.40, player.angle + 0.40);
+            ctx.closePath();
+            let flashGradient = ctx.createRadialGradient(sPlayerX, sPlayerY, 5, sPlayerX, sPlayerY, 460);
+            flashGradient.addColorStop(0, 'rgba(255, 243, 210, 0.65)');
+            flashGradient.addColorStop(0.3, 'rgba(255, 243, 210, 0.28)');
+            flashGradient.addColorStop(0.7, 'rgba(215, 205, 180, 0.08)');
+            flashGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = flashGradient; ctx.fill();
             ctx.restore();
+
+            let activeObjects = getActiveObjects();
+            for (let obj of activeObjects) {
+                if (obj.type === 'wall') drawShadowVolume(sPlayerX, sPlayerY, obj);
+            }
+
+            for (let obj of activeObjects) {
+                let rx = obj.x - cameraOffset.x;
+                let ry = obj.y - cameraOffset.y;
+                if (obj.type === 'wall') {
+                    ctx.fillStyle = obj.color;
+                    ctx.fillRect(rx, ry, obj.w, obj.h);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rx, ry, obj.w, obj.h);
+                } else if (obj.type === 'crate' && !obj.looted) {
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillRect(rx, ry, obj.w, obj.h);
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(Date.now() * 0.007) * 0.4})`;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rx - 2, ry - 2, obj.w + 4, obj.h + 4);
+                }
+            }
+
+            ctx.save();
+            ctx.translate(sPlayerX, sPlayerY);
+            ctx.rotate(player.angle);
+            let stride = Math.sin(player.walkCycle) * 7;
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(-8, -9 + stride, 7, 4);
+            ctx.fillRect(-8, 5 - stride, 7, 4);
+            ctx.fillStyle = '#27272a'; ctx.fillRect(-15, -7, 6, 14);
+            ctx.fillStyle = '#1e3a5f';
+            ctx.beginPath(); ctx.arc(-2, 0, player.size, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#3f3f46'; ctx.fillRect(-6, -8, 11, 16);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.beginPath(); ctx.arc(-1, 0, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#27272a'; ctx.fillRect(-4, -5, 6, 10);
+            ctx.fillStyle = '#1e3a5f'; ctx.fillRect(4, -8, 8, 4); ctx.fillRect(1, 4, 11, 4);
+            ctx.fillStyle = '#09090b'; ctx.fillRect(6, -2, 22, 3);
+            ctx.fillStyle = '#f4f4f5'; ctx.fillRect(22, -4, 4, 2);
+            ctx.restore();
+
+            let vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/3, canvas.width/2, canvas.height/2, canvas.width/1.1);
+            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(0.6, 'rgba(2, 2, 5, 0.35)');
+            vignette.addColorStop(1, 'rgba(1, 1, 2, 0.96)');
+            ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Loop Runner Automation Setup
         function gameLoop() {
             update();
             draw();
