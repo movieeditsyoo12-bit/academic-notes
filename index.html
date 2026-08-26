@@ -48,6 +48,7 @@
             </div>
             
             <div id="game-frame-container">
+                <!-- Clean, secure sandbox iframe template -->
                 <iframe id="game-sandbox-target" src=""></iframe>
             </div>
         </div>
@@ -62,7 +63,6 @@
     </div>
 
     <script>
-        // Directly maps the iframe src instead of using complex write parsing strings
         function loadEmbeddedGame(gameFile) {
             const container = document.getElementById('game-frame-container');
             const iframe = document.getElementById('game-sandbox-target');
@@ -70,7 +70,7 @@
             container.style.display = 'block';
         }
 
-        // Emergency Panic Eraser Configuration
+        // Emergency Tilde Panic Key (Removes the game completely)
         document.addEventListener('keydown', function(event) {
             if (event.key === '`') {
                 const container = document.getElementById('game-frame-container');
@@ -82,3 +82,4 @@
     </script>
 </body>
 </html>
+
