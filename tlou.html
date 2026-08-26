@@ -3,168 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Docs - Assignment Workspace</title>
-    <link rel="icon" type="image/x-icon" href="https://gstatic.com">
+    <title>Institutional Workspace Platform</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #020204; overflow: hidden; font-family: monospace; user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #010102; font-family: sans-serif; user-select: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        #hud-overlay { position: absolute; top: 20px; left: 20px; color: #a0aec0; background: rgba(0,0,0,0.85); padding: 8px 14px; border-radius: 4px; font-size: 11px; letter-spacing: 1px; pointer-events: none; z-index: 10; border: 1px solid #222; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0,0,0,0.4); }
+        #hud-monitor { position: absolute; top: 20px; left: 20px; color: #cbd5e1; background: rgba(10, 11, 18, 0.85); padding: 10px 16px; border-radius: 4px; font-size: 11px; letter-spacing: 1px; pointer-events: none; border: 1px solid #1e293b; font-family: monospace; }
     </style>
 </head>
 <body>
 
-    <div id="hud-overlay">🛡️ UNBLOCKABLE 3D ENGINE ACTIVE | MOVE MOUSE TO LOOK | WASD TO WALK | PRESS ` TO PURGE</div>
-    <canvas id="gameCanvas"></canvas>
+    <div id="hud-monitor">⚙️ WEBGL GRAPHICS RENDERER ACTIVE | MOVE MOUSE OVER TAB TO STEER | WASD TO WALK</div>
+    <div id="crosshair"></div>
+
+    <!-- Core WebGL 3D Graphic System (Unblocked Mirror Link) -->
+    <script src="https://jsdelivr.net"></script>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        // --- 1. CORE WEBGL PIPELINE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x030305);
+        scene.fog = new THREE.FogExp2(0x030305, 0.05); // Smooth cinematic fog profile
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Anti-aliased high-fidelity shadow filtering
+        document.body.appendChild(renderer.domElement);
 
-        // 3D Player Vectors
-        let player = { x: 3.5, y: 3.5, angle: 0, pitch: 0 };
-        let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        let keys = { w: false, a: false, s: false, d: false };
-
-        // Post-Apocalyptic 3D Grid Map Array (1 = Concrete Wall, 0 = Empty Path)
-        const mapSize = 12;
-        const map = [
-            [1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,1,0,0,0,0,1],
-            [1,0,1,1,0,0,1,0,1,1,0,1],
-            [1,0,1,0,0,0,0,0,0,1,0,1],
-            [1,0,0,0,0,1,1,0,0,0,0,1],
-            [1,0,1,1,0,1,1,0,1,1,0,1],
-            [1,0,0,1,0,0,0,0,1,0,0,1],
-            [1,0,0,1,1,0,0,1,1,0,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1]
-        ];
-        // Input Management (Click-Free Hooks)
-        window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = true; });
-        window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false; });
+        // Ground Mesh Grids with realistic dark standard materials
+        const groundGeo = new THREE.PlaneGeometry(600, 600);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x111215, roughness: 0.8, metalness: 0.1 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        // --- 2. ENVIRONMENT STRUCTURAL OBJECTS ---
+        const wallGeo = new THREE.BoxGeometry(4, 8, 4);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x242730, roughness: 0.9, metalness: 0.05 });
         
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-            
-            // Map screen mouse position directly to 3D viewing matrix matrices
-            player.angle = ((mouse.x / window.innerWidth) * Math.PI * 2) - Math.PI;
-            player.pitch = (((mouse.y / window.innerHeight) - 0.5) * -120); // Looking height range
+        for (let i = 0; i < 35; i++) {
+            const blockWall = new THREE.Mesh(wallGeo, wallMat);
+            blockWall.position.set((Math.random() - 0.5) * 160, 4, (Math.random() - 0.5) * 160);
+            blockWall.castShadow = true;
+            blockWall.receiveShadow = true;
+            scene.add(blockWall);
+        }
+
+        // --- 3. HIGH-QUALITY UNREAL STYLE CHARACTER RIG NODE ---
+        const playerPivot = new THREE.Group();
+        const playerMesh = new THREE.Group();
+        playerPivot.add(playerMesh);
+        scene.add(playerPivot);
+
+        // Smooth Unreal Mannequin Head Component
+        const headGeo = new THREE.SphereGeometry(0.24, 32, 32);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4 }); // Sleek slate gray-white armor
+        const headMesh = new THREE.Mesh(headGeo, headMat);
+        headMesh.position.set(0, 1.8, 0);
+        headMesh.castShadow = true;
+        playerMesh.add(headMesh);
+
+        // Smooth Torso Chest Layer
+        const chestGeo = new THREE.CylinderGeometry(0.38, 0.28, 1.0, 32);
+        const chestMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 }); // Dark armor vest plating
+        const chestMesh = new THREE.Mesh(chestGeo, chestMat);
+        chestMesh.position.set(0, 1.1, 0);
+        chestMesh.castShadow = true;
+        playerMesh.add(chestMesh);
+
+        // Unreal Style Shoulder Armor Spheres (Left/Right)
+        const shoulderGeo = new THREE.SphereGeometry(0.14, 16, 16);
+        const shoulderMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+        
+        const leftShoulder = new THREE.Mesh(shoulderGeo, shoulderMat);
+        leftShoulder.position.set(-0.48, 1.4, 0);
+        leftShoulder.castShadow = true;
+        playerMesh.add(leftShoulder);
+
+        const rightShoulder = new THREE.Mesh(shoulderGeo, shoulderMat);
+        rightShoulder.position.set(0.48, 1.4, 0);
+        rightShoulder.castShadow = true;
+        playerMesh.add(rightShoulder);
+
+        // Extended Primary Rifle Rails Weapon Chassis
+        const weaponGeo = new THREE.BoxGeometry(0.12, 0.16, 1.1);
+        const weaponMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
+        const weaponMesh = new THREE.Mesh(weaponGeo, weaponMat);
+        weaponMesh.position.set(0.3, 1.1, -0.6); // Slung out directly from the right arm shoulder vector
+        weaponMesh.castShadow = true;
+        playerMesh.add(weaponMesh);
+
+        // --- 4. DYNAMIC AMBIENCE LIGHTING & VOLUMETRIC FLASHLIGHT ---
+        const ambientLight = new THREE.AmbientLight(0x06060c, 1.5);
+        scene.add(ambientLight);
+
+        // Shoulder Mounted SpotLight Source
+        const flashlight = new THREE.SpotLight(0xfff6e5, 16, 55, Math.PI / 7, 0.45, 1);
+        flashlight.position.set(0.3, 1.3, -0.4); 
+        flashlight.castShadow = true;
+        flashlight.shadow.mapSize.width = 1024;
+        flashlight.shadow.mapSize.height = 1024;
+        flashlight.shadow.bias = -0.001;
+        
+        const lightTarget = new THREE.Object3D();
+        scene.add(lightTarget);
+        flashlight.target = lightTarget;
+        playerMesh.add(flashlight);
+        // --- 5. CLICK-FREE CAM INTERACTIVE LOOK TRACKING ---
+        let yawAngle = 0;
+        let pitchAngle = 0;
+
+        window.addEventListener('mousemove', (event) => {
+            // Track mouse positions relative to screen coordinates directly
+            const normX = (event.clientX / window.innerWidth) - 0.5;
+            const normY = (event.clientY / window.innerHeight) - 0.5;
+
+            yawAngle = -normX * Math.PI * 1.8;
+            pitchAngle = -normY * Math.PI * 0.4;
+            pitchAngle = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, pitchAngle)); // Secure view clamps
+
+            playerPivot.rotation.y = yawAngle;
         });
 
-        function update() {
-            let moveSpeed = 0.04;
-            let targetX = player.x;
-            let targetY = player.y;
+        // Input Navigation Keys
+        const keys = { w: false, a: false, s: false, d: false };
+        window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false; });
 
-            if (keys.w) { targetX += Math.cos(player.angle) * moveSpeed; targetY += Math.sin(player.angle) * moveSpeed; }
-            if (keys.s) { targetX -= Math.cos(player.angle) * moveSpeed; targetY -= Math.sin(player.angle) * moveSpeed; }
-            if (keys.a) { targetX += Math.sin(player.angle) * moveSpeed; targetY -= Math.cos(player.angle) * moveSpeed; }
-            if (keys.d) { targetX -= Math.sin(player.angle) * moveSpeed; targetY += Math.cos(player.angle) * moveSpeed; }
+        const playerSpeed = 0.14;
 
-            // Slide block array wall boundaries
-            if (map[Math.floor(targetY)][Math.floor(player.x)] === 0) player.y = targetY;
-            if (map[Math.floor(player.y)][Math.floor(targetX)] === 0) player.x = targetX;
-        }
-        function draw3DWorld() {
-            // Draw Ceiling and Floor Void Gradient
-            ctx.fillStyle = '#030305';
-            ctx.fillRect(0, 0, canvas.width, canvas.height / 2 + player.pitch);
-            ctx.fillStyle = '#09090e';
-            ctx.fillRect(0, canvas.height / 2 + player.pitch, canvas.width, canvas.height);
+        // --- 6. CONTINUOUS GRAPHICS PROCESSING FRAME LOOP ---
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
 
-            const fov = Math.PI / 3; // Field of View angle
-            const numRays = canvas.width; // One calculation strip per vertical column screen pixel
-            const halfFov = fov / 2;
+            let xMove = 0;
+            let zMove = 0;
 
-            // Loop across every vertical pixel line of your screen grid layout
-            for (let i = 0; i < numRays; i++) {
-                let rayAngle = (player.angle - halfFov) + (i / numRays) * fov;
-                let distance = 0;
-                let hitWall = false;
+            if (keys.w) zMove -= 1;
+            if (keys.s) zMove += 1;
+            if (keys.a) xMove -= 1;
+            if (keys.d) xMove += 1;
 
-                let cosRay = Math.cos(rayAngle);
-                let sinRay = Math.sin(rayAngle);
-
-                // Shoot line ray calculations forward until hitting a grid box barrier
-                while (!hitWall && distance < 16) {
-                    distance += 0.02;
-                    let checkX = Math.floor(player.x + cosRay * distance);
-                    let checkY = Math.floor(player.y + sinRay * distance);
-
-                    if (checkX < 0 || checkX >= mapSize || checkY < 0 || checkY >= mapSize) {
-                        hitWall = true;
-                        distance = 16;
-                    } else if (map[checkY][checkX] > 0) {
-                        hitWall = true;
-                    }
-                }
-
-                // Remove fish-eye camera warping distortion
-                let correctedDistance = distance * Math.cos(rayAngle - player.angle);
-                let wallHeight = Math.min(canvas.height, (canvas.height / correctedDistance));
-
-                // Volumetric Flashlight Calculation Pass: Brighter in center line, drops off at distances
-                let angleDiff = Math.abs(rayAngle - player.angle);
-                let flashlightIntensity = 0;
-                if (angleDiff < 0.28 && distance < 7) {
-                    flashlightIntensity = (1 - (angleDiff / 0.28)) * (1 - (distance / 7)) * 140;
-                }
-
-                // Base ambient wall shade color configuration matrix
-                let baseShade = Math.max(15, 90 - (correctedDistance * 7)) + flashlightIntensity;
-                ctx.strokeStyle = `rgb(${baseShade * 0.85}, ${baseShade * 0.95}, ${baseShade * 1.1})`;
-
-                // Render vertical strip line slice onto the viewport canvas panel
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(i, (canvas.height / 2 - wallHeight / 2) + player.pitch);
-                ctx.lineTo(i, (canvas.height / 2 + wallHeight / 2) + player.pitch);
-                ctx.stroke();
+            if (xMove !== 0 || zMove !== 0) {
+                const vectorLen = Math.sqrt(xMove * xMove + zMove * zMove);
+                const stepDirection = new THREE.Vector3(xMove / vectorLen, 0, zMove / vectorLen);
+                // Rotate step vectors into directional look alignment tracking
+                stepDirection.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle);
+                playerPivot.position.addScaledVector(stepDirection, playerSpeed);
             }
 
-            // --- OVER-THE-SHOULDER 3D SURVIVOR RIG HUD GRAPHIC ---
-            ctx.save();
-            ctx.translate(canvas.width * 0.25, canvas.height * 0.78); // Lower left side over-the-shoulder positioning
+            // Project the shoulder flashlight beam forward straight out from character face
+            lightTarget.position.set(
+                playerPivot.position.x - Math.sin(yawAngle) * 20,
+                playerPivot.position.y + 1.2 + Math.sin(pitchAngle) * 12,
+                playerPivot.position.z - Math.cos(yawAngle) * 20
+            );
 
-            // Tactical pack backpack
-            ctx.fillStyle = '#22201f'; ctx.fillRect(-18, -10, 10, 24);
-            // Clothing jacket layer
-            ctx.fillStyle = '#1e344f'; ctx.fillRect(-10, -15, 26, 40);
-            ctx.fillStyle = '#2d2d30'; ctx.fillRect(-7, -15, 20, 25); // armor vest
-            // Head/hair configuration
-            ctx.fillStyle = '#dbd7d2'; ctx.fillRect(-3, -33, 12, 18);
-            ctx.fillStyle = '#211f1e'; ctx.fillRect(-4, -36, 14, 6);
+            // TRUE OVER-THE-SHOULDER CAM POSITIONING CONFIGURATION
+            // Position camera behind (-Z), slightly above (+Y), and to the right (+X) of character node
+            const shoulderCamOffset = new THREE.Vector3(0.75, 2.3, 4.2);
+            shoulderCamOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle);
+            
+            const desiredCamPosition = playerPivot.position.clone().add(shoulderCamOffset);
+            
+            // Linear Interpolation (Lerp) for ultra-smooth trailing movement physics
+            camera.position.lerp(desiredCamPosition, 0.08);
 
-            // Extended shotgun frame holding points
-            ctx.fillStyle = '#060608'; ctx.fillRect(10, -10, 35, 6);
-            ctx.fillStyle = '#e5e5e0'; ctx.fillRect(40, -13, 5, 3); // Flashlight tip nozzle
-            ctx.restore();
+            // Direct camera vector point looking slightly in front of player character's shoulders
+            const centralAimTarget = playerPivot.position.clone().add(
+                new THREE.Vector3(-Math.sin(yawAngle) * 3, 1.2 + Math.sin(pitchAngle) * 2, -Math.cos(yawAngle) * 3)
+            );
+            camera.lookAt(centralAimTarget);
 
-            // Cinematic black gradient vignette effect mapping boundary circles
-            let vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/4, canvas.width/2, canvas.height/2, canvas.width/1.1);
-            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            vignette.addColorStop(0.6, 'rgba(2, 2, 5, 0.4)');
-            vignette.addColorStop(1, 'rgba(1, 1, 2, 0.96)');
-            ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            renderer.render(scene, camera);
         }
 
-        function engineLoop() {
-            update();
-            draw3DWorld();
-            requestAnimationFrame(engineLoop);
-        }
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-        engineLoop();
+        renderLoop();
     </script>
 </body>
 </html>
+
