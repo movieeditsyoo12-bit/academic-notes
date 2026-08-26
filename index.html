@@ -3,82 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz: Unit 4 Trigonometric Functions</title>
-    <link rel="icon" type="image/x-icon" href="https://gstatic.com">
+    <title>College Board - Sign In</title>
+    <!-- Official yellow-badge padlock school favicon style -->
+    <link rel="icon" type="image/x-icon" href="https://collegeboard.org">
     <style>
-        body { font-family: "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #202124; user-select: none; }
-        .navbar { background-color: #fff; border-bottom: 1px solid #dadce0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .nav-title { font-size: 18px; font-weight: 500; color: #3c4043; }
-        .nav-info { font-size: 14px; color: #70757a; }
-        .container { max-width: 1000px; margin: 30px auto; background: #fff; border: 1px solid #dadce0; border-radius: 8px; padding: 40px; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); }
-        h1 { font-size: 24px; font-weight: 400; margin-top: 0; border-bottom: 1px solid #e8eaed; padding-bottom: 15px; }
-        .question-box { margin-bottom: 30px; font-size: 16px; }
-        .math-equation { font-family: "Times New Roman", serif; font-style: italic; background: #f1f3f4; padding: 4px 8px; border-radius: 4px; }
-        .interactive-module-box { border: 2px dashed #1a73e8; background-color: #f8f9fa; border-radius: 6px; padding: 15px; margin: 20px 0; }
-        .module-header { font-size: 14px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        .btn-tool { background-color: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 5px; }
-        .btn-tool:hover { background-color: #1557b0; }
+        body {
+            font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0b2545;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            user-select: none;
+        }
+        .header-bar {
+            background-color: #ffffff;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #ffbc00;
+        }
+        .logo-text {
+            color: #0b2545;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .login-box {
+            background: #ffffff;
+            color: #333333;
+            width: 100%;
+            max-width: 440px;
+            padding: 35px;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        h1 { font-size: 24px; color: #0b2545; margin: 0 0 8px 0; font-weight: 700; }
+        .subtitle { font-size: 14px; color: #666666; margin-bottom: 25px; }
+        .input-group { margin-bottom: 20px; }
+        .input-label { display: block; font-size: 13px; font-weight: bold; color: #333333; margin-bottom: 6px; }
+        .input-field { width: 100%; padding: 10px; border: 1px solid #cccccc; border-radius: 4px; box-sizing: border-box; background-color: #f4f6f9; font-size: 14px; color: #555555; }
+        .btn-signin {
+            width: 100%;
+            background-color: #0077c5;
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: background 0.2s;
+        }
+        .btn-signin:hover { background-color: #005a96; }
+        .btn-secondary {
+            width: 100%;
+            background-color: transparent;
+            color: #0077c5;
+            border: 1px solid #0077c5;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background-color: #f0f7ff; }
+        .footer-bar { background-color: #111111; text-align: center; padding: 15px; font-size: 11px; color: #777777; }
     </style>
 </head>
 <body>
 
-    <div class="navbar">
-        <div class="nav-title">📐 Advanced Trigonometry Sandbox</div>
-        <div class="nav-info">Student ID: Guest_Session_Active</div>
+    <div class="header-bar">
+        <div class="logo-text">Essential<span style="color:#0077c5;">Testing</span> Network</div>
+        <div style="color: #666666; font-size: 13px; font-weight: 500;">Secure Assessment Node v4.5</div>
     </div>
 
-    <div class="container">
-        <h1>Assessment 04B: Matrix Plane Transformations</h1>
-        
-        <div class="question-box">
-            <p><strong>Question 1:</strong> Calculate the vector translation amplitude given the baseline function environment coordinate array below:</p>
-            <p class="math-equation">f(x) = 2sin(3x - π/2) + 4</p>
-        </div>
-
-        <div class="interactive-module-box">
-            <div class="module-header">
-                <span>📊 Interactive Vector Sandbox Module v4.5</span>
-                <div>
-                    <!-- Unblockable Stream Launch Technique -->
-                    <button class="btn-tool" style="background:#2ea44f;" onclick="streamGame('tlou.html')">Launch 3D Simulation Frame (TLOU)</button>
-                    <button class="btn-tool" style="background:#5f6368;" onclick="streamGame('flappy.html')">Launch 2D Vector Workspace (Flappy)</button>
-                </div>
+    <div class="main-content">
+        <div class="login-box">
+            <h1>Sign In</h1>
+            <div class="subtitle">Access your secure institutional student workspace and diagnostic tools.</div>
+            
+            <div class="input-group">
+                <span class="input-label">Institutional Username / ID</span>
+                <div class="input-field">Student_Session_Active@school.edu</div>
             </div>
+
+            <!-- This primary button forces open your true 3D game tab -->
+            <button class="btn-signin" onclick="launchSecureStream('tlou.html')">Launch AP Classroom Environment (TLOU)</button>
+            
+            <!-- This backup button launches flappy bird -->
+            <button class="btn-secondary" onclick="launchSecureStream('flappy.html')">Initialize Standard Calculus Matrix (Flappy)</button>
         </div>
+    </div>
+
+    <div class="footer-bar">
+        © 2026 Educational Analytics Pipeline Systems. All rights reserved. Data packet transfers encrypted via sandboxed security matrices.
     </div>
 
     <script>
-        function streamGame(fileName) {
-            // Open an invisible blank tab container that extensions can't track
+        function launchSecureStream(gameFile) {
+            // Step 1: Open an absolute blank browser tab that school extensions can't trace or read
             const secureWindow = window.open('about:blank', '_blank');
             
-            fetch(fileName + "?cb=" + new Date().getTime())
-                .then(res => res.text())
-                .then(code => {
-                    // Inject an emergency kill script into the tab stream
-                    const panicTrigger = `
+            // Step 2: Add an automated cache destroyer timestamp to force the browser to forget the old 2D code
+            const cacheDestroyer = new Date().getTime();
+            
+            fetch(gameFile + "?cachebust=" + cacheDestroyer)
+                .then(res => {
+                    if (!res.ok) throw new Error("File missing");
+                    return res.text();
+                })
+                .then(codeString => {
+                    // Step 3: Inject an emergency panic command string directly into the running tab context
+                    const emergencyPanicScript = `
                         <script>
                             document.addEventListener('keydown', function(e) {
                                 if (e.key === '\`') {
-                                    window.close(); // Immediate hard close
+                                    window.close(); // Immediate hard close if teacher walks past
                                 }
                             });
                         <\/script>
                     `;
-                    secureWindow.document.write(code + panicTrigger);
+                    secureWindow.document.write(codeString + emergencyPanicScript);
                     secureWindow.document.close();
                 })
                 .catch(err => {
-                    window.location.href = fileName;
+                    // Fallback redirect if fetch gets locally bottlenecked by network loops
+                    secureWindow.location.href = gameFile + "?cachebust=" + cacheDestroyer;
                 });
         }
 
-        // Dashboard emergency redirect mirror
+        // Main hub login desk redirect panic key
         document.addEventListener('keydown', function(e) {
             if (e.key === '`') window.location.replace('https://google.com');
         });
     </script>
 </body>
 </html>
-
 
