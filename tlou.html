@@ -3,135 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL Plane System</title>
+    <title>Module 04A - Array Map Renderer</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #020204; font-family: sans-serif; user-select: none; }
-        #hud { position: absolute; top: 15px; left: 15px; color: #fff; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; font-size: 12px; border: 1px solid #333; pointer-events: none; }
+        body { margin: 0; padding: 0; background-color: #050508; overflow: hidden; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100%; height: 100vh; background-color: #07070b; }
+        #hud { position: absolute; top: 15px; left: 15px; color: #8e9aa8; background: rgba(10,10,15,0.85); padding: 8px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #1e293b; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="hud">⚡ VECTOR RUNTIME RUNNING | WALKING: WASD or Arrows</div>
-
-    <script src="https://cloudflare.com"></script>
+    <div id="hud">📦 GRAPH ENGINE RUNNING | WALK: WASD / ARROWS | AIM: MOVE MOUSE</div>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- WebGL Core ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020204);
-        scene.fog = new THREE.FogExp2(0x020204, 0.08);
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // Fixed Top-Down Over-the-shoulder angle (Bypasses clicking/mouse restrictions completely)
-        camera.position.set(0, 12, 10);
-        camera.lookAt(0, 0, 0);
+        // Set canvas to full screen size inside the frame container
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
+        // Game State Variables
+        let player = { x: canvas.width / 2, y: canvas.height / 2, size: 14, speed: 3.5, angle: 0 };
+        let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+        let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
-        // --- Ground Plane ---
-        const floorGeo = new THREE.PlaneGeometry(300, 300);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.9 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
-
-        // --- Scattered Post-Apocalyptic Pillars ---
-        const pillarGeo = new THREE.BoxGeometry(1.2, 5, 1.2);
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1c1c22, roughness: 1.0 });
-        for (let i = 0; i < 30; i++) {
-            const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-            pillar.position.set((Math.random() - 0.5) * 60, 2.5, (Math.random() - 0.5) * 60);
-            pillar.castShadow = true;
-            pillar.receiveShadow = true;
-            scene.add(pillar);
+        // Generate static post-apocalyptic obstacles/ruins
+        let obstacles = [];
+        for (let i = 0; i < 20; i++) {
+            obstacles.push({
+                x: Math.random() * (window.innerWidth - 100) + 50,
+                y: Math.random() * (window.innerHeight - 100) + 50,
+                w: Math.random() * 40 + 20,
+                h: Math.random() * 40 + 20
+            });
         }
 
-        // --- Survival Capsule Character ---
-        const player = new THREE.Group();
-        scene.add(player);
-
-        const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 16);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x242b35, roughness: 0.6 });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 0.9;
-        body.castShadow = true;
-        player.add(body);
-
-        // Facing indicator
-        const visorGeo = new THREE.BoxGeometry(0.2, 0.2, 0.4);
-        const visorMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
-        const visor = new THREE.Mesh(visorGeo, visorMat);
-        visor.position.set(0, 1.4, -0.3);
-        player.add(visor);
-
-        // --- Atmospheric Lighting & Flashlight ---
-        const ambientLight = new THREE.AmbientLight(0x040408, 1.2);
-        scene.add(ambientLight);
-
-        const flashlight = new THREE.SpotLight(0xfff5e6, 18, 35, Math.PI / 6, 0.5, 1);
-        flashlight.position.set(0, 1.2, -0.2);
-        flashlight.castShadow = true;
-        
-        const lightTarget = new THREE.Object3D();
-        scene.add(lightTarget);
-        flashlight.target = lightTarget;
-        player.add(flashlight);
-
-        // --- Simple Direct Movement Inputs ---
-        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+        // Input Trackers (Completely click-free)
         window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
-
-        const speed = 0.12;
-
-        function loop() {
-            requestAnimationFrame(loop);
-
-            let mx = 0;
-            let mz = 0;
-
-            if (keys.w || keys.ArrowUp) mz -= 1;
-            if (keys.s || keys.ArrowDown) mz += 1;
-            if (keys.a || keys.ArrowLeft) mx -= 1;
-            if (keys.d || keys.ArrowRight) mx += 1;
-
-            if (mx !== 0 || mz !== 0) {
-                const length = Math.sqrt(mx * mx + mz * mz);
-                const dx = (mx / length) * speed;
-                const dz = (mz / length) * speed;
-
-                player.position.x += dx;
-                player.position.z += dz;
-
-                // Turn the player mesh instantly toward the movement vectors
-                player.rotation.y = Math.atan2(dx, dz);
-            }
-
-            // Lock flashlight to cast directly forward wherever character steps
-            lightTarget.position.set(
-                player.position.x - Math.sin(player.rotation.y) * 10,
-                0.5,
-                player.position.z - Math.cos(player.rotation.y) * 10
-            );
-
-            // Camera smoothly locks onto player positions from above
-            camera.position.set(player.position.x, player.position.y + 11, player.position.z + 9);
-            camera.lookAt(player.position.x, player.position.y, player.position.z - 2);
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
         });
 
-        loop();
+        // Simple AABB Collision Detection Rule
+        function checkCollision(px, py, size) {
+            for (let obs of obstacles) {
+                if (px + size > obs.x && px - size < obs.x + obs.w &&
+                    py + size > obs.y && py - size < obs.y + obs.h) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Main Physics Update Loops
+        function update() {
+            let nextX = player.x;
+            let nextY = player.y;
+
+            if (keys.w || keys.ArrowUp) nextY -= player.speed;
+            if (keys.s || keys.ArrowDown) nextY += player.speed;
+            if (keys.a || keys.ArrowLeft) nextX -= player.speed;
+            if (keys.d || keys.ArrowRight) nextX += player.speed;
+
+            // Apply movement borders and block wall collisions
+            if (!checkCollision(nextX, player.y, player.size) && nextX > player.size && nextX < canvas.width - player.size) {
+                player.x = nextX;
+            }
+            if (!checkCollision(player.x, nextY, player.size) && nextY > player.size && nextY < canvas.height - player.size) {
+                player.y = nextY;
+            }
+
+            // Calculate rotation angle tracking the mouse cursor
+            player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+        }
+
+        // Tactical 2D Flashlight Raycasting Render Pipeline
+        function draw() {
+            // 1. Reset dark apocalypse background canvas
+            ctx.fillStyle = '#06060a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Draw The Tactical Flashlight Cone (The Last of Us ambiance)
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            // Flashlight properties: 35-degree beam angle, spreading out 260 pixels
+            ctx.arc(player.x, player.y, 260, player.angle - 0.35, player.angle + 0.35);
+            ctx.closePath();
+            
+            // Create a realistic flashlight beam drop-off gradient shadow
+            let lightGradient = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 260);
+            lightGradient.addColorStop(0, 'rgba(255, 248, 220, 0.45)');
+            lightGradient.addColorStop(0.6, 'rgba(255, 248, 220, 0.15)');
+            lightGradient.addColorStop(1, 'rgba(255, 248, 220, 0)');
+            
+            ctx.fillStyle = lightGradient;
+            ctx.fill();
+            ctx.restore();
+
+            // 3. Draw Ruined Obstacles / Barriers
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            }
+
+            // 4. Draw Player Character Template (Tactical Survivor Circle + Weapon Indicator)
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+
+            // Draw player outer ring body
+            ctx.beginPath();
+            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
+            ctx.fillStyle = '#38bdf8'; // Tactical Cyan/Blue
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 3;
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw flashlight/weapon aiming handle direction indicator
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(6, -3, 8, 6);
+            ctx.restore();
+        }
+
+        // Loop Runner Automation Setup
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
     </script>
 </body>
 </html>
+
