@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation Engine Module</title>
+    <style>
+        body { margin: 0; background: #70c5ce; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; margin: 0 auto; background: #70c5ce; }
+        #score { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 32px; color: white; font-weight: bold; font-family: monospace; text-shadow: 2px 2px 0 #000; }
+    </style>
+</head>
+<body>
+    <div id="score">0</div>
+    <canvas id="birdCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("birdCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 400; canvas.height = window.innerHeight;
+
+        let bird = { x: 50, y: 150, w: 30, h: 24, gravity: 0.4, velocity: 0, jump: -7 };
+        let pipes = []; let score = 0; let gameOver = false;
+        let pipeWidth = 60; let pipeGap = 140; let pipeInterval = 90; let frame = 0;
+
+        function spawnPipe() {
+            let minH = 50, maxH = canvas.height - pipeGap - 50;
+            let topH = Math.floor(Math.random() * (maxH - minH + 1) + minH);
+            pipes.push({ x: canvas.width, top: topH, bottom: canvas.height - topH - pipeGap });
+        }
+
+        function update() {
+            if (gameOver) return;
+            frame++;
+            bird.velocity += bird.gravity; bird.y += bird.velocity;
+            if (bird.y + bird.h > canvas.height || bird.y < 0) gameOver = true;
+
+            if (frame % pipeInterval === 0) spawnPipe();
+
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= 2;
+                if (pipes[i].x + pipeWidth < 0) { pipes.splice(i, 1); score++; document.getElementById("score").innerText = score; continue; }
+                if (bird.x + bird.w > pipes[i].x && bird.x < pipes[i].x + pipeWidth) {
+                    if (bird.y < pipes[i].top || bird.y + bird.h > canvas.height - pipes[i].bottom) gameOver = true;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#f1c40f"; ctx.fillRect(bird.x, bird.y, bird.w, bird.h);
+            ctx.fillStyle = "#2ecc71";
+            pipes.forEach(p => {
+                ctx.fillRect(p.x, 0, pipeWidth, p.top);
+                ctx.fillRect(p.x, canvas.height - p.bottom, pipeWidth, p.bottom);
+            });
+            if (gameOver) { ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle="white"; ctx.font="20px monospace"; ctx.fillText("GAME OVER - SPACE TO RESTART", 40, canvas.height/2); }
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space") {
+                if (gameOver) { bird.y = 150; bird.velocity = 0; pipes = []; score = 0; document.getElementById("score").innerText = 0; gameOver = false; }
+                else { bird.velocity = bird.jump; }
+            }
+        });
+        loop();
+    </script>
+</body>
+</html>
