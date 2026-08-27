@@ -3,193 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>College Board - Sign In</title>
-    <link rel="icon" type="image/x-icon" href="https://collegeboard.org">
+    <title>Institutional Matrix Sandbox Layer</title>
     <style>
-        body { font-family: "Roboto", sans-serif; margin: 0; padding: 0; background-color: #0b2545; color: #ffffff; display: flex; flex-direction: column; min-height: 100vh; user-select: none; }
-        .header-bar { background-color: #ffffff; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #ffbc00; }
-        .logo-text { color: #0b2545; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-        .main-content { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px 20px; }
-        .login-box { background: #ffffff; color: #333333; width: 100%; max-width: 440px; padding: 35px; border-radius: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        h1 { font-size: 24px; color: #0b2545; margin: 0 0 8px 0; font-weight: 700; }
-        .subtitle { font-size: 14px; color: #666666; margin-bottom: 25px; }
-        .input-group { margin-bottom: 20px; }
-        .input-label { display: block; font-size: 13px; font-weight: bold; color: #333333; margin-bottom: 6px; }
-        .input-field { width: 100%; padding: 10px; border: 1px solid #cccccc; border-radius: 4px; box-sizing: border-box; background-color: #f4f6f9; font-size: 14px; color: #555555; }
-        .btn-signin { width: 100%; background-color: #0077c5; color: #ffffff; border: none; padding: 12px; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
-        .btn-signin:hover { background-color: #005a96; }
-        .btn-secondary { width: 100%; background-color: transparent; color: #0077c5; border: 1px solid #0077c5; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; display: block; box-sizing: border-box; }
-        .btn-secondary:hover { background-color: #f0f7ff; }
-        .footer-bar { background-color: #111111; text-align: center; padding: 15px; font-size: 11px; color: #777777; }
-    </style>
-</head>
-<body>
-
-    <div class="header-bar">
-        <div class="logo-text">Essential<span style="color:#0077c5;">Testing</span> Network</div>
-        <div style="color: #666666; font-size: 13px; font-weight: 500;">Secure Assessment Node v5.0</div>
-    </div>
-
-    <div class="main-content">
-        <div class="login-box">
-            <h1>Sign In</h1>
-            <div class="subtitle">Access your secure institutional student workspace and diagnostic tools.</div>
-            
-            <div class="input-group">
-                <span class="input-label">Institutional Username / ID</span>
-                <div class="input-field">Student_Session_Active@school.edu</div>
-            </div>
-
-            <!-- Modified to point directly to the file destination to completely bypass streaming blocks -->
-            <button class="btn-signin" onclick="launchDirect('tlou.html')">Launch AP Classroom Environment (TLOU)</button>
-            <button class="btn-secondary" onclick="launchDirect('flappy.html')">Initialize Standard Calculus Matrix (Flappy)</button>
-        </div>
-    </div>
-
-    <div class="footer-bar">
-        © 2026 Educational Analytics Pipeline Systems. All rights reserved.
-    </div>
-
-    <script>
-        function launchDirect(gameFile) {
-            // Launches the file straight as a regular web address with a unique token to drop older cache profiles
-            window.location.href = gameFile + "?v=" + new Date().getTime();
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            background-color: #030306;
+            font-family: monospace;
+            user-select: none;
         }
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL 3D Simulation Workspace</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #010102; font-family: sans-serif; user-select: none; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0,0,0,0.5); display: none; }
-        #click-prompt { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 7, 12, 0.95); color: #ffffff; cursor: pointer; z-index: 100; transition: opacity 0.3s; }
-        #hud-monitor { position: absolute; top: 20px; left: 20px; color: #cbd5e1; background: rgba(10, 11, 18, 0.8); padding: 10px 16px; border-radius: 4px; font-size: 11px; letter-spacing: 1px; pointer-events: none; border: 1px solid #1e293b; font-family: monospace; z-index: 10; }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid rgba(0, 0, 0, 0.4);
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #94a3b8;
+            background: rgba(10, 11, 16, 0.85);
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid #1e293b;
+        }
     </style>
 </head>
 <body>
 
-    <div id="hud-monitor">⚙️ WEBGL GRAPHICS HARNESS ACTIVE | WASD: MOVE | MOUSE: LOOK ARROWS</div>
+    <div id="hud">⚙️ 3D SYSTEM ONLINE | WALKING: WASD | LOOK: DRAG MOUSE (NO CLICK LOCKS REQUIRED)</div>
     <div id="crosshair"></div>
-    
-    <div id="click-prompt">
-        <h2 style="margin: 0 0 10px 0; font-size: 20px; letter-spacing: 1px; color: #0077c5;">ENGAGE TRUE 3D SYSTEM LAYER</h2>
-        <p style="margin: 0; font-size: 13px; color: #71717a;">Click anywhere on screen to lock cursor and start playing</p>
-    </div>
-
-    <!-- Official Full Three.js 3D Core Library -->
-    <script src="https://cloudflare.com"></script>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020306);
-        scene.fog = new THREE.FogExp2(0x020306, 0.04); 
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
-        document.body.appendChild(renderer.domElement);
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
-        const groundGeo = new THREE.PlaneGeometry(600, 600);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x121316, roughness: 0.8 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-        // --- PREMIUM MOUSE INTERACTION ROUTINES ---
-        const promptScreen = document.getElementById('click-prompt');
-        const crosshair = document.getElementById('crosshair');
-        let controlsLocked = false;
+        let player = { x: 0, y: 1.2, z: 0, yaw: 0, pitch: 0, speed: 0.12 };
+        let input = { w: false, a: false, s: false, d: false };
+        let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-        document.body.addEventListener('click', () => {
-            if (!controlsLocked) document.body.requestPointerLock();
-        });
-
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === document.body) {
-                promptScreen.style.opacity = '0';
-                setTimeout(() => promptScreen.style.display = 'none', 300);
-                crosshair.style.display = 'block';
-                controlsLocked = true;
-            } else {
-                promptScreen.style.display = 'flex';
-                setTimeout(() => promptScreen.style.opacity = '1', 10);
-                crosshair.style.display = 'none';
-                controlsLocked = false;
-            }
-        });
-
-        let yaw = 0, pitch = 0;
-        document.addEventListener('mousemove', (e) => {
-            if (!controlsLocked) return;
-
-            // Capture raw mouse hardware velocities perfectly for 1:1 aiming tracking
-            yaw -= e.movementX * 0.0022;
-            pitch -= e.movementY * 0.0022;
-            pitch = Math.max(-Math.PI / 5, Math.min(Math.PI / 5, pitch)); // Up/Down view angle caps
-
-            playerPivot.rotation.y = yaw;
-        });
-
-        // Keyboard Movement Maps
-        const input = { w: false, a: false, s: false, d: false };
+        let pillars = [];
+        for(let i=0; i<45; i++) {
+            pillars.push({
+                x: (Math.random() - 0.5) * 80,
+                z: (Math.random() - 0.5) * 80,
+                r: Math.random() * 1.5 + 1.0, 
+                h: Math.random() * 6.0 + 4.0  
+            });
+        }
         window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = true; });
         window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in input) input[e.key.toLowerCase()] = false; });
-
-        const walkSpeed = 0.15;
-
-        function runGameLoop() {
-            requestAnimationFrame(runGameLoop);
-
-            let mx = 0, mz = 0;
-            if (input.w) mz -= 1;
-            if (input.s) mz += 1;
-            if (input.a) mx -= 1;
-            if (input.d) mx += 1;
-
-            if (mx !== 0 || mz !== 0) {
-                const len = Math.sqrt(mx * mx + mz * mz);
-                const moveVec = new THREE.Vector3(mx / len, 0, mz / len);
-                moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-                playerPivot.position.addScaledVector(moveVec, walkSpeed);
-            }
-
-            // Keep the flashlight projected straight forward out from torso face node coordinates
-            lightTarget.position.set(
-                playerPivot.position.x - Math.sin(yaw) * 20,
-                playerPivot.position.y + 1.2 + Math.sin(pitch) * 12,
-                playerPivot.position.z - Math.cos(yaw) * 20
-            );
-
-            // TRUE HIGH-QUALITY OVER-THE-SHOULDER CAM POSITION LAYOUT
-            const shoulderCamOffset = new THREE.Vector3(0.8, 2.2, 4.0); 
-            shoulderCamOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
             
-            const targetCameraPos = playerPivot.position.clone().add(shoulderCamOffset);
-            camera.position.lerp(targetCameraPos, 0.08); // Ultra-smooth trailing physics lag
-
-            const centralAimTarget = playerPivot.position.clone().add(
-                new THREE.Vector3(-Math.sin(yaw) * 4, 1.2 + Math.sin(pitch) * 2, -Math.cos(yaw) * 4)
-            );
-            camera.lookAt(centralAimTarget);
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            player.yaw = ((mouse.x / window.innerWidth) * Math.PI * 2.5) - (Math.PI * 1.25);
+            player.pitch = ((mouse.y / window.innerHeight) - 0.5) * -0.8; 
         });
 
-        runGameLoop();
+        function updatePhysics() {
+            let forwardX = -Math.sin(player.yaw);
+            let forwardZ = -Math.cos(player.yaw);
+            let rightX = -Math.sin(player.yaw - Math.PI/2);
+            let rightZ = -Math.cos(player.yaw - Math.PI/2);
+
+            if (input.w) { player.x += forwardX * player.speed; player.z += forwardZ * player.speed; }
+            if (input.s) { player.x -= forwardX * player.speed; player.z -= forwardZ * player.speed; }
+            if (input.a) { player.x += rightX * player.speed; player.z += rightZ * player.speed; }
+            if (input.d) { player.x -= rightX * player.speed; player.z -= rightZ * player.speed; }
+        }
+        function renderHighPolyFrame() {
+            let horizonY = canvas.height / 2 + (player.pitch * (canvas.height / 2));
+            
+            ctx.fillStyle = '#030306';
+            ctx.fillRect(0, 0, canvas.width, horizonY);
+            ctx.fillStyle = '#0b0c10';
+            ctx.fillRect(0, horizonY, canvas.width, canvas.height);
+
+            let visibleQueue = [];
+
+            for (let pil of pillars) {
+                let dx = pil.x - player.x;
+                let dz = pil.z - player.z;
+
+                let rotX = dx * Math.cos(player.yaw) - dz * Math.sin(player.yaw);
+                let rotZ = dx * Math.sin(player.yaw) + dz * Math.cos(player.yaw);
+
+                if (rotZ <= 0.1) continue;
+
+                let focalScale = (canvas.height * 0.8) / rotZ;
+                let screenX = (canvas.width / 2) + (rotX * focalScale);
+                let baseScreenY = horizonY + ((player.y) * focalScale);
+                let topScreenY = horizonY - ((pil.h - player.y) * focalScale);
+
+                let radiusWidth = pil.r * focalScale;
+
+                visibleQueue.push({
+                    sz: rotZ, x: screenX, botY: baseScreenY, topY: topScreenY, rad: radiusWidth
+                });
+            }
+
+            visibleQueue.sort((a, b) => b.sz - a.sz);
+
+            for (let obj of visibleQueue) {
+                let fogFactor = Math.min(1.0, obj.sz / 55);
+                let baseShade = Math.floor(35 * (1.0 - fogFactor));
+
+                let centerOffsetAngle = Math.abs(obj.x - canvas.width / 2);
+                let torchIntensity = 0;
+                if (centerOffsetAngle < (obj.rad + 140) && obj.sz < 24) {
+                    torchIntensity = (1.0 - (centerOffsetAngle / (obj.rad + 140))) * (1.0 - (obj.sz / 24)) * 95;
+                }
+
+                let finalRGB = Math.floor(baseShade + torchIntensity);
+                ctx.fillStyle = `rgb(${finalRGB * 0.8}, ${finalRGB * 0.85}, ${finalRGB * 1.05})`;
+                ctx.fillRect(obj.x - obj.rad / 2, obj.topY, obj.rad, obj.botY - obj.topY);
+                
+                ctx.strokeStyle = `rgba(255,255,255,${0.04 * (1.0 - fogFactor)})`;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(obj.x - obj.rad / 2, obj.topY, obj.rad, obj.botY - obj.topY);
+            }
+
+            // --- SMOOTH UNREAL STYLE MANNEQUIN CHARACTER OVER-THE-SHOULDER RENDER ---
+            ctx.save();
+            ctx.translate(canvas.width * 0.68, canvas.height * 0.74);
+
+            ctx.fillStyle = '#1c1d22'; ctx.fillRect(-22, -10, 12, 34);
+
+            let torsoGradient = ctx.createLinearGradient(-15, 0, 20, 0);
+            torsoGradient.addColorStop(0, '#1e293b'); torsoGradient.addColorStop(1, '#334155');
+            ctx.fillStyle = torsoGradient;
+            ctx.beginPath(); ctx.arc(0, 10, 28, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#475569';
+            ctx.beginPath(); ctx.arc(-26, -5, 11, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(26, -5, 11, 0, Math.PI * 2); ctx.fill();
+
+            let headGradient = ctx.createRadialGradient(-2, -35, 2, 0, -35, 16);
+            headGradient.addColorStop(0, '#f8fafc'); headGradient.addColorStop(1, '#cbd5e1');
+            ctx.fillStyle = headGradient;
+            ctx.beginPath(); ctx.arc(0, -35, 17, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(16, -20, 12, 50);
+            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(20, -25, 4, 6);
+
+            ctx.restore();
+
+            let vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/4, canvas.width/2, canvas.height/2, canvas.width/1.1);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)'); vignette.addColorStop(0.5, 'rgba(2, 2, 5, 0.3)'); vignette.addColorStop(1, 'rgba(1, 1, 2, 0.96)');
+            ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function mainEngineLoop() {
+            updatePhysics();
+            renderHighPolyFrame();
+            requestAnimationFrame(mainEngineLoop);
+        }
+
+        mainEngineLoop();
     </script>
 </body>
 </html>
